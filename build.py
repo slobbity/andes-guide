@@ -75,6 +75,15 @@ def load_locations():
                 v = row.get(key, "").strip()
                 return v if v else None
 
+            # Driving time as integer (or null if blank)
+            driving_time = None
+            try:
+                dt = row.get("driving_time_minutes", "").strip()
+                if dt:
+                    driving_time = int(dt)
+            except ValueError:
+                pass
+
             locations.append({
                 "name":        name,
                 "category":    category,
@@ -86,6 +95,7 @@ def load_locations():
                 "phone":       nullable("phone"),
                 "website":     nullable("website"),
                 "googleMaps":  nullable("googleMaps"),
+                "driving_time_minutes": driving_time,
             })
 
     return locations
