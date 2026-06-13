@@ -10,11 +10,18 @@ Usage:
 Edit locations.csv to add, remove, or update places.
 Then run this script and refresh index.html in your browser.
 
-CSV columns:
-    name, category, lat, lng, description, hours, seasonal,
-    phone, website, googleMaps
+CSV columns (header row, exact names):
+    include, name, category, lat, lng, description, hours,
+    seasonal, phone, website, googleMaps
 
-Valid categories: restaurant | shop | outdoor | attraction
+Valid categories: restaurant | shop | outdoor | attraction | ski
+
+The "include" column controls what appears on the map: leave it blank
+or set yes / y / true / 1 to show a place; set no / n / false / 0 to
+hide it without deleting the row. Any extra columns you add (e.g. a
+private "note" column) are ignored by the build, so the CSV is a safe
+place to keep your own working notes.
+
 Leave a field blank to omit it (it will become null in the map).
 """
 
@@ -43,6 +50,13 @@ def load_locations():
             name = row["name"].strip()
             if not name:
                 continue  # skip blank rows
+
+            # "include" column — hide a place without deleting its row.
+            # Blank or yes/true/1 → shown; no/false/0 → skipped.
+            include = row.get("include", "").strip().lower()
+            if include in {"no", "n", "false", "0", "hide", "exclude", "off"}:
+                print(f"  Skipping row {i}: '{name}' (include = '{include}')")
+                continue
 
             category = row["category"].strip().lower()
             if category not in VALID_CATEGORIES:
