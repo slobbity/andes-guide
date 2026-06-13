@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A Field Guide to Andes — Western Catskills, NY</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    /* ─────────────────────────────────────────────────────────────
+       TYPE — et-book (Tufte's typeface) with a Palatino/Georgia
+       fallback so the page is beautiful even if the CDN font fails.
+       ───────────────────────────────────────────────────────────── */
+    @font-face{font-family:"et-book";font-weight:400;font-style:normal;font-display:swap;
+      src:url("https://cdn.jsdelivr.net/gh/edwardtufte/tufte-css/et-book/et-book-roman-line-figures/et-book-roman-line-figures.woff") format("woff");}
+    @font-face{font-family:"et-book";font-weight:400;font-style:italic;font-display:swap;
+      src:url("https://cdn.jsdelivr.net/gh/edwardtufte/tufte-css/et-book/et-book-display-italic-old-style-figures/et-book-display-italic-old-style-figures.woff") format("woff");}
+    @font-face{font-family:"et-book";font-weight:600;font-style:normal;font-display:swap;
+      src:url("https://cdn.jsdelivr.net/gh/edwardtufte/tufte-css/et-book/et-book-bold-line-figures/et-book-bold-line-figures.woff") format("woff");}
+
+    :root{
+      --bg:#fffff8;          /* Tufte cream */
+      --ink:#111111;
+      --ink-soft:#43433d;
+      --ink-faint:#86857a;
+      --rule:#dcdccf;        /* hairline */
+      --track:#ebe9df;       /* empty sparkline cell / bar track */
+      --bar:#b3ab9c;         /* neutral distance bar */
+      --serif:"et-book",Palatino,"Palatino Linotype","Book Antiqua",Georgia,serif;
+      --sans:"Gill Sans","Gill Sans MT",Calibri,"Trebuchet MS","Helvetica Neue",Arial,sans-serif;
+
+      /* Muted categorical palette — smallest effective difference */
+      --c-restaurant:#9e4a3b;
+      --c-shop:#3f6e57;
+      --c-outdoor:#7a7b3f;
+      --c-attraction:#3d5a80;
+      --c-ski:#6c8ea4;
+    }
+
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    html,body{height:100%;}
+    body{font-family:var(--serif);color:var(--ink);background:var(--bg);
+      -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;}
+
+    #layout{display:flex;height:100vh;width:100%;}
+
+    /* ── Index column (the "detail" reading) ─────────────────────── */
+    #index{
+      width:384px;flex:0 0 384px;height:100%;overflow-y:auto;
+      background:var(--bg);border-right:1px solid var(--rule);
+      padding:34px 32px 64px;
+    }
+    .masthead h1{font-weight:400;font-size:31px;line-height:1.06;letter-spacing:-0.012em;}
+    .masthead .sub{font-style:italic;color:var(--ink-soft);font-size:15px;margin-top:5px;}
+    hr.rule{height:1px;background:var(--rule);border:0;margin:17px 0;}
+    .intro{font-size:14.5px;line-height:1.52;color:var(--ink-soft);}
+    .reading{font-family:var(--sans);font-size:11px;color:var(--ink-faint);
+      line-height:1.7;margin-top:13px;}
+    .reading .ex{display:inline-flex;gap:1px;vertical-align:-1px;margin:0 4px;}
+    .reading .ex i{width:5px;height:9px;display:inline-block;background:var(--track);}
+    .reading .ex i.on{background:#8d8c80;}
+
+    /* ── Category groups (double as legend + filter) ─────────────── */
+    .group{margin-top:24px;}
+    .cat-head{
+      font-family:var(--sans);font-size:11.5px;font-weight:600;
+      letter-spacing:0.09em;text-transform:uppercase;color:var(--ink);
+      display:flex;align-items:center;gap:9px;cursor:pointer;user-select:none;
+      padding-bottom:6px;border-bottom:1px solid var(--rule);
+    }
+    .cat-head .tick{width:9px;height:9px;flex:0 0 9px;background:var(--cat);}
+    .cat-head .count{margin-left:auto;color:var(--ink-faint);font-weight:400;
+      font-variant-numeric:tabular-nums;}
+    .cat-head:hover{color:#000;}
+    .cat-head.off{color:var(--ink-faint);text-decoration:line-through;
+      text-decoration-color:var(--rule);}
+    .cat-head.off .tick{background:var(--ink-faint);}
+    .group.off .entry{opacity:.3;}
+    .group.off .entry{pointer-events:none;}
+
+    /* ── Entry ───────────────────────────────────────────────────── */
+    .entry{
+      --cat:#888;padding:13px 0 14px;border-bottom:1px solid var(--rule);
+      cursor:pointer;transition:background .12s;
+    }
+    .entry:hover{background:rgba(60,60,40,.035);}
+    .entry.selected{box-shadow:inset 3px 0 0 var(--cat);
+      padding-left:12px;margin-left:-12px;background:rgba(60,60,40,.04);}
+    .entry-name{font-size:18px;line-height:1.14;}
+    .entry-desc{font-size:13.5px;line-height:1.5;color:var(--ink-soft);margin-top:3px;}
+    .entry-hours{font-family:var(--sans);font-size:11.5px;color:var(--ink-faint);margin-top:7px;}
+    .entry-meta{display:flex;align-items:center;gap:16px;margin-top:7px;
+      font-family:var(--sans);font-size:11px;color:var(--ink-faint);}
+
+    .dist{display:inline-flex;align-items:center;gap:6px;
+      font-variant-numeric:tabular-nums;}
+    .track{width:46px;height:3px;background:var(--track);display:inline-block;position:relative;}
+    .fill{position:absolute;left:0;top:0;height:3px;background:var(--bar);}
+
+    .strip{display:inline-flex;gap:1px;}
+    .cell{width:6px;height:10px;background:var(--track);display:inline-block;}
+    .cell.on{background:var(--cat);}
+    .yearround{font-family:var(--serif);font-style:italic;font-size:12.5px;color:var(--ink-faint);}
+
+    .entry-note{font-size:11.5px;font-style:italic;color:#8a6a3a;margin-top:7px;line-height:1.45;}
+    .entry-links{font-family:var(--sans);font-size:11.5px;margin-top:9px;}
+    .entry-links a{color:var(--ink-soft);text-decoration:none;border-bottom:1px solid var(--rule);}
+    .entry-links a:hover{color:var(--ink);border-color:currentColor;}
+    .entry-links .sep{color:var(--rule);margin:0 8px;}
+
+    /* ── Map (the "overview") ────────────────────────────────────── */
+    #map{flex:1;height:100%;background:#eef0ec;}
+
+    /* De-junk Leaflet's chrome */
+    .leaflet-container{font-family:var(--sans);background:#eef0ec;}
+    .leaflet-control-zoom{border:1px solid var(--rule)!important;box-shadow:none!important;}
+    .leaflet-control-zoom a{background:var(--bg)!important;color:var(--ink-soft)!important;
+      border-bottom:1px solid var(--rule)!important;font-family:var(--sans)!important;
+      font-weight:400!important;width:28px!important;height:28px!important;line-height:28px!important;}
+    .leaflet-control-zoom a:hover{background:#f4f3e8!important;color:var(--ink)!important;}
+    .leaflet-control-attribution{background:rgba(255,255,248,.82)!important;
+      color:var(--ink-faint)!important;font-size:10px!important;}
+    .leaflet-control-attribution a{color:var(--ink-soft)!important;}
+
+    /* Hover name label on markers */
+    .place-tip{background:var(--bg)!important;border:1px solid #c9c8ba!important;
+      border-radius:0!important;box-shadow:none!important;color:var(--ink)!important;
+      font-family:var(--sans)!important;font-size:11.5px!important;padding:2px 7px!important;
+      white-space:nowrap;}
+    .place-tip::before{display:none!important;}
+
+    /* Reference marker label */
+    .home-tip{background:transparent!important;border:0!important;box-shadow:none!important;
+      color:var(--ink-soft)!important;font-family:var(--serif)!important;font-style:italic!important;
+      font-size:13px!important;padding:0 0 0 4px!important;}
+    .home-tip::before{display:none!important;}
+
+    /* Minimal popup — hairline card, no shadow, square corners */
+    .tufte-popup .leaflet-popup-content-wrapper{background:var(--bg);border:1px solid #bdbcae;
+      border-radius:0;box-shadow:none;padding:0;}
+    .tufte-popup .leaflet-popup-content{margin:0;width:auto!important;}
+    .tufte-popup .leaflet-popup-tip{background:var(--bg);border:1px solid #bdbcae;box-shadow:none;}
+    .tufte-popup a.leaflet-popup-close-button{color:var(--ink-faint);top:5px;right:6px;font-size:16px;}
+    .tufte-popup a.leaflet-popup-close-button:hover{color:var(--ink);background:none;}
+    .pp{padding:11px 15px 13px;min-width:178px;max-width:236px;}
+    .pp-cat{font-family:var(--sans);font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-faint);}
+    .pp-name{font-family:var(--serif);font-size:18px;line-height:1.13;margin-top:2px;}
+    .pp-hours{font-family:var(--sans);font-size:11.5px;color:var(--ink-soft);margin-top:7px;}
+    .pp-links{font-family:var(--sans);font-size:11.5px;margin-top:9px;}
+    .pp-links a{color:var(--ink-soft);text-decoration:none;border-bottom:1px solid var(--rule);}
+    .pp-links a:hover{color:var(--ink);}
+    .pp-links .sep{color:var(--rule);margin:0 7px;}
+
+    /* ── Responsive — stack on narrow screens ────────────────────── */
+    @media (max-width:780px){
+      #layout{flex-direction:column;}
+      #index{width:100%;flex:0 0 auto;height:46vh;border-right:0;border-bottom:1px solid var(--rule);
+        padding:24px 22px 40px;}
+      #map{height:54vh;}
+    }
+  </style>
+</head>
+<body>
+
+  <div id="layout">
+    <aside id="index">
+      <div class="masthead">
+        <h1>A Field Guide to Andes</h1>
+        <div class="sub">&amp; the Western Catskills, New York</div>
+      </div>
+      <hr class="rule">
+      <p class="intro">A working list of the places we love near the house — where to
+        eat, shop, walk, and ski. Select any name to find it on the map; select a
+        category heading to hide or show it.</p>
+      <p class="reading">Each entry shows the months it is open
+        <span class="ex"><i></i><i></i><i></i><i></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i></span>
+        and its distance from Andes as the crow flies.</p>
+      <div id="groups"></div>
+    </aside>
+    <main id="map"></main>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+
+    // ═══════════════════════════════════════════════════════════════
+    //  LOCATION DATA — managed by build.py (edit locations.csv, then
+    //  run `python3 build.py`). Fields: name, category, lat, lng,
+    //  description, hours, seasonal, phone, website, googleMaps.
+    // ═══════════════════════════════════════════════════════════════
+
+    const locations = [
+      {"name": "The Andes Hotel", "category": "restaurant", "lat": 42.1769, "lng": -74.7884, "description": "A beloved Catskills institution — casual dining, craft cocktails, and live music in a beautifully restored 19th-century hotel right in the village of Andes.", "hours": "Thu–Sat: 5pm–10pm · Sun: 11am–3pm", "seasonal": "Hours may vary seasonally — call ahead in winter.", "phone": "(845) 676-3980", "website": "https://andeshotel.com", "googleMaps": "https://www.google.com/maps/search/?api=1&query=The+Andes+Hotel+Andes+NY"},
+      {"name": "Brushland Eating House", "category": "restaurant", "lat": 42.221, "lng": -74.737, "description": "Acclaimed farm-to-table restaurant in a converted farmhouse in Bovina Center. Creative seasonal menus sourced directly from local Catskill farms.", "hours": "Fri–Sun: 5pm–9pm", "seasonal": "Schedule changes seasonally — always check website before visiting.", "phone": "(607) 832-4861", "website": "https://brushlandeatinghouse.com", "googleMaps": "https://www.google.com/maps/search/?api=1&query=Brushland+Eating+House+Bovina+Center+NY"},
+      {"name": "The Bull & Garland", "category": "restaurant", "lat": 42.3467, "lng": -74.6631, "description": "An authentic British pub tucked away in the charming village of Hobart. Classic pub food, real ales on draught, and a wonderfully genuine neighborhood atmosphere.", "hours": "Wed–Sun: 12pm–10pm", "seasonal": null, "phone": "(607) 538-9367", "website": null, "googleMaps": "https://www.google.com/maps/search/?api=1&query=The+Bull+and+Garland+Hobart+NY"},
+      {"name": "Peekamoose Restaurant", "category": "restaurant", "lat": 42.0058, "lng": -74.5372, "description": "Chef Devin Mills' highly regarded fine dining destination in Big Indian. Elegant seasonal cuisine, an outstanding wine program, and a romantic setting.", "hours": "Thu–Mon: 5pm–9pm", "seasonal": "Closed Tuesdays & Wednesdays. Reservations strongly recommended.", "phone": "(845) 254-6500", "website": "https://peekamooserestaurant.com", "googleMaps": "https://www.google.com/maps/search/?api=1&query=Peekamoose+Restaurant+Big+Indian+NY"},
+      {"name": "Pakatakan Farmers Market", "category": "shop", "lat": 42.1608, "lng": -74.5842, "description": "One of the Catskills' best farmers markets, held in the stunning octagonal Halcottsville barn. Fresh produce, local dairy, baked goods, meat, flowers, and crafts.", "hours": "Saturdays: 9am–1pm", "seasonal": "Open June through October only.", "phone": null, "website": "https://rondondfarmersmarket.org", "googleMaps": "https://www.google.com/maps/search/?api=1&query=Pakatakan+Farmers+Market+Halcottsville+NY"},
+      {"name": "Catskill Distilling Co.", "category": "shop", "lat": 41.9067, "lng": -74.8417, "description": "Award-winning craft distillery producing whiskey, gin, and vodka from local grains. Tours, tastings, and a beautiful tasting room in Bethel.", "hours": "Mon–Thu: 12pm–6pm · Fri–Sun: 11am–8pm", "seasonal": null, "phone": "(845) 583-3141", "website": "https://catskillsdistilling.com", "googleMaps": "https://www.google.com/maps/search/?api=1&query=Catskill+Distilling+Company+Bethel+NY"},
+      {"name": "Binnekill Square", "category": "shop", "lat": 42.1456, "lng": -74.6497, "description": "Charming shopping district along the stream in Margaretville. Independent boutiques, antiques, art galleries, specialty food, and the Catskill Center gift shop.", "hours": "Varies by shop", "seasonal": null, "phone": null, "website": null, "googleMaps": "https://www.google.com/maps/search/?api=1&query=Binnekill+Square+Margaretville+NY"},
+      {"name": "Pepacton Reservoir", "category": "outdoor", "lat": 42.0933, "lng": -74.9017, "description": "One of New York City's largest reservoirs — a stunning expanse of still water surrounded by forested hills. Exceptional birdwatching, scenic drives, and fishing (NYS fishing license + permit required).", "hours": "Open year-round", "seasonal": "Fall foliage is spectacular mid-October. Winter views are dramatic.", "phone": null, "website": null, "googleMaps": "https://www.google.com/maps/search/?api=1&query=Pepacton+Reservoir+NY"},
+      {"name": "Belleayre Mountain", "category": "ski", "lat": 42.136, "lng": -74.527, "description": "State-owned ski resort in Highmount — 50+ trails, terrain parks, and a gondola. Also offers hiking, mountain biking, and summer concerts. Great for all skill levels.", "hours": "Ski season: Dec–Mar · Summer: Jun–Oct", "seasonal": "Night skiing on select dates; check website for conditions.", "phone": "(845) 254-5600", "website": "https://belleayre.com", "googleMaps": "https://www.google.com/maps/search/?api=1&query=Belleayre+Mountain+Highmount+NY"},
+      {"name": "Hunter Mountain", "category": "ski", "lat": 42.1803, "lng": -74.2267, "description": "One of the largest ski resorts in the Catskills with 67 trails and extensive snowmaking. About 30 miles east of Andes. Strong intermediate and expert terrain.", "hours": "Ski season: Nov–Apr", "seasonal": "100% snowmaking coverage keeps the mountain open even in warm winters.", "phone": "(518) 263-4223", "website": "https://huntermtn.com", "googleMaps": "https://www.google.com/maps/search/?api=1&query=Hunter+Mountain+Hunter+NY"},
+      {"name": "Windham Mountain", "category": "ski", "lat": 42.2958, "lng": -74.2442, "description": "Family-friendly resort with 54 trails and a relaxed Catskills vibe. About 35 miles east. Known for excellent grooming and a welcoming atmosphere for beginners.", "hours": "Ski season: Nov–Apr", "seasonal": "First Tracks program offers early morning groomed runs before lifts open to the public.", "phone": "(518) 734-4300", "website": "https://windhammountain.com", "googleMaps": "https://www.google.com/maps/search/?api=1&query=Windham+Mountain+Windham+NY"},
+      {"name": "Balsam Lake Mtn. Trail", "category": "outdoor", "lat": 42.0856, "lng": -74.6147, "description": "A Catskill 3500 peak with a restored fire tower offering sweeping 360° views. A rewarding moderate hike — roughly 5.5 miles round trip with 1,000 ft. elevation gain.", "hours": "Open year-round (weather permitting)", "seasonal": "Trail may be icy or snowy December–March. Microspikes recommended.", "phone": null, "website": null, "googleMaps": "https://www.google.com/maps/search/?api=1&query=Balsam+Lake+Mountain+Trailhead+NY"},
+      {"name": "Catskill Center Trails", "category": "outdoor", "lat": 42.1558, "lng": -74.6129, "description": "The Catskill Center stewards dozens of miles of trail across their preserve properties. Stop by or visit their website for trail maps, guided hikes, and conservation programs.", "hours": "Trails open dawn to dusk", "seasonal": null, "phone": "(845) 586-2611", "website": "https://catskillcenter.org", "googleMaps": "https://www.google.com/maps/search/?api=1&query=Catskill+Center+Arkville+NY"},
+      {"name": "Delhi NY", "category": "attraction", "lat": 42.2784, "lng": -74.9192, "description": "The Delaware County seat — a friendly small town with a great diner, hardware store, supermarket (Price Chopper), library, and SUNY Delaware campus. Best bet for larger grocery runs.", "hours": "Town open year-round", "seasonal": null, "phone": null, "website": null, "googleMaps": "https://www.google.com/maps/search/?api=1&query=Delhi+NY"},
+      {"name": "Margaretville NY", "category": "attraction", "lat": 42.1456, "lng": -74.6497, "description": "A lively Catskills village along the East Branch of the Delaware. Restaurants, shops, a pharmacy, Freshtown grocery, the Margaretville Hospital, and Binnekill Square.", "hours": "Town open year-round", "seasonal": null, "phone": null, "website": null, "googleMaps": "https://www.google.com/maps/search/?api=1&query=Margaretville+NY"},
+      {"name": "Roxbury NY", "category": "attraction", "lat": 42.2958, "lng": -74.5626, "description": "Charming hamlet birthplace of naturalist John Burroughs and financier Jay Gould. Visit the Kirkside Park gazebo, local galleries, and the excellent Roxbury Motel with its famous theme rooms.", "hours": "Town open year-round", "seasonal": null, "phone": null, "website": null, "googleMaps": "https://www.google.com/maps/search/?api=1&query=Roxbury+NY"},
+    ]; // ← End of locations array. Add new entries above this line.
+
+
+    // ═══════════════════════════════════════════════════════════════
+    //  CONFIG
+    // ═══════════════════════════════════════════════════════════════
+
+    const ANDES = [42.1865, -74.7838];   // village center — origin for distances
+
+    const catConfig = {
+      restaurant: { name: 'Restaurants & Bars',  color: '#9e4a3b' },
+      shop:       { name: 'Shops & Markets',      color: '#3f6e57' },
+      outdoor:    { name: 'Outdoors & Nature',    color: '#7a7b3f' },
+      attraction: { name: 'Towns & Services',     color: '#3d5a80' },
+      ski:        { name: 'Ski & Winter Sports',  color: '#6c8ea4' },
+    };
+    const catOrder = ['restaurant', 'shop', 'outdoor', 'attraction', 'ski'];
+
+
+    // ═══════════════════════════════════════════════════════════════
+    //  DERIVED DATA — distance + months-open, computed honestly from
+    //  coordinates and the hours/seasonal prose (no hand-entered fields)
+    // ═══════════════════════════════════════════════════════════════
+
+    function haversineMiles(a, b) {
+      const R = 3958.8, rad = d => d * Math.PI / 180;
+      const dLat = rad(b[0] - a[0]), dLng = rad(b[1] - a[1]);
+      const h = Math.sin(dLat / 2) ** 2 +
+                Math.cos(rad(a[0])) * Math.cos(rad(b[0])) * Math.sin(dLng / 2) ** 2;
+      return 2 * R * Math.asin(Math.sqrt(h));
+    }
+
+    const MONTH_NAMES = ['January','February','March','April','May','June',
+                         'July','August','September','October','November','December'];
+    const MON = '(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|' +
+                'jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)';
+    const RANGE_RE = new RegExp('\\b' + MON + '\\s*(?:–|—|-|to|through|thru)\\s*' + MON + '\\b', 'gi');
+    const monIdx = s => ({jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11})[s.slice(0,3).toLowerCase()];
+
+    // Returns { open:[12 bools], year:bool }.
+    // "year-round" anywhere in the text overrides (e.g. a trail that is
+    // simply *icy* Dec–Mar is still open all year). Otherwise we union
+    // every explicit month range we find (handles "Dec–Mar · Jun–Oct").
+    function monthsOpen(loc) {
+      const text = ((loc.hours || '') + ' ' + (loc.seasonal || '')).toLowerCase();
+      const open = new Array(12).fill(false);
+      if (/year[\s-]?round/.test(text) || (!loc.hours && !loc.seasonal)) {
+        open.fill(true); return { open, year: true };
+      }
+      let m, found = false;
+      RANGE_RE.lastIndex = 0;
+      while ((m = RANGE_RE.exec(text))) {
+        found = true;
+        const a = monIdx(m[1]), b = monIdx(m[2]);
+        for (let k = a; ; k = (k + 1) % 12) { open[k] = true; if (k === b) break; }
+      }
+      if (!found) { open.fill(true); return { open, year: true }; }
+      return { open, year: open.every(Boolean) };
+    }
+
+    // Pre-compute distances so the bars share one scale (comparable lengths)
+    locations.forEach(l => { l._miles = haversineMiles(ANDES, [l.lat, l.lng]); });
+    const MAX_MILES = Math.max(...locations.map(l => l._miles));
+
+
+    // ═══════════════════════════════════════════════════════════════
+    //  MAP — clean light basemap, no filters, no terrain, no frame
+    // ═══════════════════════════════════════════════════════════════
+
+    const map = L.map('map', { zoomControl: false, scrollWheelZoom: true });
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+    // CartoDB Positron — minimal, desaturated, water reads naturally
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
+      subdomains: 'abcd', maxZoom: 19, updateWhenIdle: true, keepBuffer: 1,
+    }).addTo(map);
+
+    // Reference point: Andes village (origin of the distance measure)
+    L.circleMarker(ANDES, { radius: 4, color: '#5a5a52', weight: 1.5,
+        fill: true, fillColor: '#5a5a52', fillOpacity: 1, interactive: false })
+      .addTo(map)
+      .bindTooltip('Andes', { permanent: true, direction: 'right', offset: [7, 0], className: 'home-tip' });
+
+
+    // ═══════════════════════════════════════════════════════════════
+    //  SPARKLINE + DISTANCE RENDERERS
+    // ═══════════════════════════════════════════════════════════════
+
+    function seasonHTML(loc) {
+      const { open, year } = monthsOpen(loc);
+      if (year) return '<span class="yearround">open year-round</span>';
+      const cells = open.map(o => `<span class="cell${o ? ' on' : ''}"></span>`).join('');
+      const names = MONTH_NAMES.filter((_, i) => open[i]).join(', ');
+      return `<span class="strip" title="Open: ${names}">${cells}</span>`;
+    }
+
+    function distHTML(miles) {
+      const w = Math.max(2, Math.round(miles / MAX_MILES * 46));
+      const label = miles < 9.5 ? miles.toFixed(1) : Math.round(miles);
+      return `<span class="dist" title="${miles.toFixed(1)} miles from Andes (direct)">` +
+             `<span class="track"><span class="fill" style="width:${w}px"></span></span>${label} mi</span>`;
+    }
+
+
+    // ═══════════════════════════════════════════════════════════════
+    //  MAP MARKERS — small precise dots, color = category
+    // ═══════════════════════════════════════════════════════════════
+
+    function popupHTML(loc) {
+      const links = [];
+      if (loc.website)    links.push(`<a href="${loc.website}" target="_blank" rel="noopener">Website</a>`);
+      if (loc.googleMaps) links.push(`<a href="${loc.googleMaps}" target="_blank" rel="noopener">Directions</a>`);
+      return `<div class="pp">
+        <div class="pp-cat">${catConfig[loc.category].name}</div>
+        <div class="pp-name">${loc.name}</div>
+        ${loc.hours ? `<div class="pp-hours">${loc.hours}</div>` : ''}
+        ${links.length ? `<div class="pp-links">${links.join('<span class="sep">·</span>')}</div>` : ''}
+      </div>`;
+    }
+
+    const items = [];   // { loc, marker, cat, el }
+
+    locations.forEach((loc, i) => {
+      const color = catConfig[loc.category].color;
+      const marker = L.circleMarker([loc.lat, loc.lng], {
+        radius: 6, color: '#fffff8', weight: 1.5,
+        fillColor: color, fillOpacity: 0.95,
+      }).addTo(map);
+
+      marker.bindTooltip(loc.name, { direction: 'top', offset: [0, -7], className: 'place-tip' });
+      marker.bindPopup(popupHTML(loc), { className: 'tufte-popup', maxWidth: 240,
+        autoPanPadding: L.point(30, 40) });
+
+      marker.on('click', () => select(i, { pan: false }));
+      marker.on('mouseover', () => { if (i !== selected) marker.setRadius(7.5); });
+      marker.on('mouseout',  () => { if (i !== selected) marker.setRadius(6); });
+
+      items.push({ loc, marker, cat: loc.category, el: null });
+    });
+
+
+    // ═══════════════════════════════════════════════════════════════
+    //  SIDEBAR INDEX — grouped by category (legend + filter + detail)
+    // ═══════════════════════════════════════════════════════════════
+
+    const groupsEl = document.getElementById('groups');
+
+    catOrder.forEach(cat => {
+      const members = items.map((it, i) => ({ it, i })).filter(x => x.it.cat === cat);
+      if (!members.length) return;
+
+      const section = document.createElement('section');
+      section.className = 'group';
+      section.dataset.cat = cat;
+      section.style.setProperty('--cat', catConfig[cat].color);
+
+      const head = document.createElement('h2');
+      head.className = 'cat-head';
+      head.dataset.cat = cat;
+      head.innerHTML = `<span class="tick"></span>${catConfig[cat].name}<span class="count">${members.length}</span>`;
+      head.title = 'Show / hide this category';
+      head.addEventListener('click', () => toggleCat(cat, head, section));
+      section.appendChild(head);
+
+      members.forEach(({ it, i }) => {
+        const loc = it.loc;
+        const el = document.createElement('div');
+        el.className = 'entry';
+        el.style.setProperty('--cat', catConfig[cat].color);
+        el.innerHTML = `
+          <div class="entry-name">${loc.name}</div>
+          <div class="entry-desc">${loc.description || ''}</div>
+          ${loc.hours ? `<div class="entry-hours">${loc.hours}</div>` : ''}
+          <div class="entry-meta">${distHTML(loc._miles)}${seasonHTML(loc)}</div>
+          ${loc.seasonal ? `<div class="entry-note">${loc.seasonal}</div>` : ''}
+          ${linksHTML(loc)}
+        `;
+        el.addEventListener('click', () => select(i, { pan: true }));
+        // keep link clicks from also triggering the entry's select()
+        el.querySelectorAll('a').forEach(a => a.addEventListener('click', e => e.stopPropagation()));
+        section.appendChild(el);
+        it.el = el;
+      });
+
+      groupsEl.appendChild(section);
+    });
+
+    function linksHTML(loc) {
+      const links = [];
+      if (loc.website)    links.push(`<a href="${loc.website}" target="_blank" rel="noopener">Website</a>`);
+      if (loc.phone)      links.push(`<a href="tel:${loc.phone.replace(/[^0-9+]/g, '')}">${loc.phone}</a>`);
+      if (loc.googleMaps) links.push(`<a href="${loc.googleMaps}" target="_blank" rel="noopener">Directions</a>`);
+      if (!links.length) return '';
+      return `<div class="entry-links">${links.join('<span class="sep">·</span>')}</div>`;
+    }
+
+
+    // ═══════════════════════════════════════════════════════════════
+    //  SELECTION  (links map ↔ index)
+    // ═══════════════════════════════════════════════════════════════
+
+    let selected = -1;
+
+    function select(i, { pan }) {
+      if (selected >= 0 && items[selected].el) items[selected].el.classList.remove('selected');
+      selected = i;
+      const it = items[i];
+
+      items.forEach((x, j) => x.marker.setRadius(j === i ? 8 : 6));
+      if (it.el) {
+        it.el.classList.add('selected');
+        it.el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+      if (pan) map.setView(it.marker.getLatLng(), Math.max(map.getZoom(), 13), { animate: true });
+      it.marker.openPopup();
+    }
+
+    map.on('popupclose', () => {
+      if (selected >= 0) {
+        if (items[selected].el) items[selected].el.classList.remove('selected');
+        items[selected].marker.setRadius(6);
+        selected = -1;
+      }
+    });
+
+
+    // ═══════════════════════════════════════════════════════════════
+    //  CATEGORY TOGGLE  (the heading is the filter)
+    // ═══════════════════════════════════════════════════════════════
+
+    const hidden = {};
+    function toggleCat(cat, head, section) {
+      hidden[cat] = !hidden[cat];
+      head.classList.toggle('off', hidden[cat]);
+      section.classList.toggle('off', hidden[cat]);
+      items.forEach(it => {
+        if (it.cat !== cat) return;
+        if (hidden[cat]) map.removeLayer(it.marker);
+        else it.marker.addTo(map);
+      });
+    }
+
+
+    // ═══════════════════════════════════════════════════════════════
+    //  INITIAL VIEW — frame all places (the overview)
+    // ═══════════════════════════════════════════════════════════════
+
+    const bounds = L.latLngBounds(locations.map(l => [l.lat, l.lng])).extend(ANDES);
+    map.fitBounds(bounds, { padding: [50, 50], maxZoom: 11 });
+
+    window.addEventListener('resize', () => map.invalidateSize());
+    setTimeout(() => map.invalidateSize(), 0);
+
+  </script>
+</body>
+</html>

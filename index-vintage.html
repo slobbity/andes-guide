@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Catskills Guest Guide — Andes, NY</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --parchment:     #f2e6c3;
+      --parchment-mid: #e5d4a1;
+      --parchment-dark:#d4be82;
+      --gold:          #9b7d2a;
+      --gold-light:    #c9a94e;
+      --dark-brown:    #1e0f06;
+      --rich-brown:    #2c1a08;
+      --text:          #2c1a08;
+      --text-mid:      #5a3820;
+      --text-light:    #8b6040;
+      --frame-bg:      #1a0e05;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+      background: var(--frame-bg);
+      font-family: 'Lora', Georgia, serif;
+    }
+
+    /* ── Outer frame ──────────────────────────────── */
+    .map-frame {
+      position: fixed;
+      inset: 14px;
+      pointer-events: none;
+      z-index: 800;
+    }
+
+    .map-frame-border {
+      position: absolute;
+      inset: 0;
+      border: 2px solid var(--gold);
+      box-shadow:
+        inset 0 0 0 5px var(--frame-bg),
+        inset 0 0 0 7px var(--gold-light),
+        inset 0 0 0 10px var(--frame-bg),
+        inset 0 0 0 12px var(--gold);
+    }
+
+    /* Corner ornaments */
+    .corner {
+      position: absolute;
+      width: 48px;
+      height: 48px;
+      color: var(--gold);
+    }
+    .corner svg { width: 100%; height: 100%; }
+    .corner.tl { top: -1px; left: -1px; }
+    .corner.tr { top: -1px; right: -1px; transform: scaleX(-1); }
+    .corner.bl { bottom: -1px; left: -1px; transform: scaleY(-1); }
+    .corner.br { bottom: -1px; right: -1px; transform: scale(-1, -1); }
+
+    /* ── Map ──────────────────────────────────────── */
+    #map {
+      position: fixed;
+      inset: 26px;
+      z-index: 1;
+      background: var(--parchment);
+    }
+
+    /* Vintage filter on tiles */
+    .leaflet-tile-pane {
+      filter: sepia(0.5) contrast(1.2) brightness(0.9) saturate(0.95);
+    }
+
+    /* Paper grain overlay */
+    #map::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: 450;
+      pointer-events: none;
+      opacity: 0.07;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+    }
+
+    /* Zoom control — vintage styling */
+    .leaflet-control-zoom {
+      border: 1.5px solid var(--gold) !important;
+      box-shadow: 2px 3px 8px rgba(0,0,0,0.35) !important;
+      margin-bottom: 215px !important;  /* clear the 5-item legend */
+      margin-right: 32px !important;
+    }
+    .leaflet-control-zoom a {
+      background: rgba(242,230,195,0.95) !important;
+      color: var(--text) !important;
+      font-family: 'Playfair Display', serif !important;
+      font-size: 16px !important;
+      font-weight: 700 !important;
+      border-bottom: 1px solid var(--gold-light) !important;
+      width: 30px !important;
+      height: 30px !important;
+      line-height: 30px !important;
+    }
+    .leaflet-control-zoom a:hover {
+      background: var(--parchment-mid) !important;
+      color: var(--text) !important;
+    }
+    .leaflet-control-zoom-out { border-bottom: none !important; }
+    .leaflet-control-attribution {
+      background: rgba(242, 230, 195, 0.75) !important;
+      color: var(--text-light) !important;
+      font-family: 'Lora', serif !important;
+      font-size: 9px !important;
+      border-top: 1px solid var(--gold) !important;
+    }
+    .leaflet-control-attribution a { color: var(--text-mid) !important; }
+
+    /* ── Title cartouche ──────────────────────────── */
+    .map-title {
+      position: absolute;
+      top: 30px;
+      right: 30px;
+      z-index: 600;
+      background: rgba(242, 230, 195, 0.96);
+      border: 1.5px solid var(--gold);
+      box-shadow: 3px 4px 12px rgba(0,0,0,0.35), inset 0 0 0 3px rgba(201,169,78,0.2);
+      padding: 16px 22px 14px;
+      text-align: center;
+      min-width: 200px;
+    }
+
+    .map-title .title-rule {
+      display: block;
+      height: 1px;
+      background: linear-gradient(to right, transparent, var(--gold), transparent);
+      margin: 6px 0;
+    }
+
+    .map-title h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+      text-transform: uppercase;
+      letter-spacing: 4px;
+      line-height: 1.4;
+    }
+
+    .map-title .subtitle {
+      font-family: 'Lora', serif;
+      font-style: italic;
+      font-size: 11px;
+      color: var(--text-mid);
+      letter-spacing: 1px;
+      margin-top: 2px;
+    }
+
+    .map-title .tagline {
+      font-family: 'Lora', serif;
+      font-size: 9.5px;
+      color: var(--text-light);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-top: 4px;
+    }
+
+    /* ── Category filter ──────────────────────────── */
+    .category-filter {
+      position: absolute;
+      top: 30px;
+      left: 30px;
+      z-index: 600;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .category-filter h3 {
+      font-family: 'Playfair Display', serif;
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 2.5px;
+      color: var(--parchment);
+      margin-bottom: 2px;
+      text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
+    }
+
+    .filter-btn {
+      background: rgba(242, 230, 195, 0.92);
+      border: 1px solid var(--gold);
+      padding: 6px 13px;
+      font-family: 'Lora', serif;
+      font-size: 10.5px;
+      color: var(--text);
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      transition: background 0.18s, color 0.18s;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      white-space: nowrap;
+      box-shadow: 1px 2px 5px rgba(0,0,0,0.25);
+    }
+
+    .filter-btn:hover { background: var(--parchment-mid); }
+    .filter-btn.active { background: var(--gold); color: var(--parchment); border-color: var(--dark-brown); }
+
+    .filter-dot {
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      border: 1px solid rgba(0,0,0,0.2);
+    }
+
+    /* ── Compass rose ─────────────────────────────── */
+    .compass-wrap {
+      position: absolute;
+      bottom: 32px;
+      left: 32px;
+      width: 78px;
+      height: 78px;
+      z-index: 600;
+      filter: drop-shadow(2px 3px 5px rgba(0,0,0,0.45));
+    }
+
+    /* ── Legend ───────────────────────────────────── */
+    .map-legend {
+      position: absolute;
+      bottom: 32px;
+      right: 32px;
+      z-index: 600;
+      background: rgba(242, 230, 195, 0.95);
+      border: 1.5px solid var(--gold);
+      padding: 10px 14px 12px;
+      box-shadow: 2px 3px 10px rgba(0,0,0,0.3);
+      min-width: 140px;
+    }
+
+    .map-legend h3 {
+      font-family: 'Playfair Display', serif;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 2.5px;
+      color: var(--text);
+      border-bottom: 1px solid var(--gold-light);
+      padding-bottom: 5px;
+      margin-bottom: 7px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 5px 0;
+      font-size: 10.5px;
+      color: var(--text-mid);
+    }
+
+    .legend-pin {
+      width: 14px; height: 14px;
+      border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg);
+      flex-shrink: 0;
+      border: 1px solid rgba(0,0,0,0.2);
+    }
+
+    /* ── Custom markers ───────────────────────────── */
+    .leaflet-marker-icon { background: transparent !important; border: none !important; }
+
+    .map-pin {
+      position: relative;
+      cursor: pointer;
+      transition: transform 0.15s ease;
+    }
+    .map-pin:hover { transform: scale(1.18) translateY(-3px); }
+
+    /* ── Popup ────────────────────────────────────── */
+    .leaflet-popup-content-wrapper {
+      background: var(--parchment) !important;
+      border: 2px solid var(--gold) !important;
+      border-radius: 0 !important;
+      box-shadow: 5px 5px 18px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(201,169,78,0.25) !important;
+      padding: 0 !important;
+      overflow: hidden;
+      min-width: 300px !important;
+      max-width: 360px !important;
+    }
+
+    .leaflet-popup-content { margin: 0 !important; width: auto !important; }
+
+    .leaflet-popup-tip-container { margin-top: -1px; }
+    .leaflet-popup-tip { background: var(--gold) !important; box-shadow: none !important; }
+
+    .leaflet-popup-close-button {
+      color: var(--text-light) !important;
+      font-size: 18px !important;
+      right: 8px !important;
+      top: 6px !important;
+      font-family: 'Playfair Display', serif !important;
+    }
+    .leaflet-popup-close-button:hover { color: var(--text) !important; background: none !important; }
+
+    .popup-header {
+      background: linear-gradient(to bottom, var(--parchment-mid), var(--parchment));
+      padding: 12px 36px 10px 14px;
+      border-bottom: 1px solid var(--gold-light);
+    }
+
+    .popup-category-label {
+      font-size: 8.5px;
+      text-transform: uppercase;
+      letter-spacing: 2.5px;
+      color: var(--gold);
+      margin-bottom: 3px;
+    }
+
+    .popup-name {
+      font-family: 'Playfair Display', serif;
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.25;
+    }
+
+    .popup-body {
+      padding: 10px 14px 14px;
+    }
+
+    .popup-description {
+      font-size: 11.5px;
+      font-style: italic;
+      color: var(--text-mid);
+      line-height: 1.65;
+      margin-bottom: 9px;
+    }
+
+    .popup-detail {
+      display: flex;
+      gap: 6px;
+      font-size: 10.5px;
+      color: var(--text-mid);
+      margin: 4px 0;
+      align-items: flex-start;
+    }
+
+    .popup-detail-label {
+      font-weight: 600;
+      color: var(--text);
+      min-width: 42px;
+      flex-shrink: 0;
+    }
+
+    .popup-seasonal {
+      margin-top: 8px;
+      padding: 5px 8px;
+      border-left: 2px solid var(--gold-light);
+      font-size: 10px;
+      font-style: italic;
+      color: #7a4020;
+      background: rgba(201,169,78,0.08);
+    }
+
+    .popup-actions {
+      display: flex;
+      gap: 7px;
+      margin-top: 11px;
+      padding-top: 10px;
+      border-top: 1px solid var(--parchment-dark);
+    }
+
+    .popup-btn {
+      flex: 1;
+      padding: 7px 6px;
+      font-family: 'Lora', serif;
+      font-size: 9.5px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      border: 1px solid var(--gold);
+      background: transparent;
+      color: var(--text);
+      cursor: pointer;
+      text-decoration: none;
+      text-align: center;
+      display: block;
+      transition: background 0.18s, color 0.18s;
+    }
+
+    .popup-btn:hover { background: var(--parchment-mid); }
+
+    .popup-btn.primary {
+      background: var(--gold);
+      color: var(--parchment);
+      border-color: var(--dark-brown);
+    }
+    .popup-btn.primary:hover { background: #7a6018; }
+  </style>
+</head>
+<body>
+
+  <!-- Decorative frame (non-interactive overlay) -->
+  <div class="map-frame" aria-hidden="true">
+    <div class="map-frame-border"></div>
+
+    <!-- Corner ornaments -->
+    <div class="corner tl">
+      <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M2 2 L18 2 L18 6 L6 6 L6 18 L2 18 Z" fill="#9b7d2a"/>
+        <path d="M2 2 L22 2" stroke="#9b7d2a" stroke-width="1.5"/>
+        <path d="M2 2 L2 22" stroke="#9b7d2a" stroke-width="1.5"/>
+        <circle cx="12" cy="12" r="3" fill="none" stroke="#9b7d2a" stroke-width="1.2"/>
+        <circle cx="12" cy="12" r="1.2" fill="#9b7d2a"/>
+        <path d="M12 8 L12 6 M12 18 L12 16 M8 12 L6 12 M18 12 L16 12" stroke="#9b7d2a" stroke-width="1"/>
+        <path d="M4 4 L10 10 M20 4 L14 10 M4 20 L10 14" stroke="#9b7d2a" stroke-width="0.6" opacity="0.5"/>
+      </svg>
+    </div>
+    <div class="corner tr">
+      <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M2 2 L18 2 L18 6 L6 6 L6 18 L2 18 Z" fill="#9b7d2a"/>
+        <path d="M2 2 L22 2" stroke="#9b7d2a" stroke-width="1.5"/>
+        <path d="M2 2 L2 22" stroke="#9b7d2a" stroke-width="1.5"/>
+        <circle cx="12" cy="12" r="3" fill="none" stroke="#9b7d2a" stroke-width="1.2"/>
+        <circle cx="12" cy="12" r="1.2" fill="#9b7d2a"/>
+        <path d="M12 8 L12 6 M12 18 L12 16 M8 12 L6 12 M18 12 L16 12" stroke="#9b7d2a" stroke-width="1"/>
+      </svg>
+    </div>
+    <div class="corner bl">
+      <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M2 2 L18 2 L18 6 L6 6 L6 18 L2 18 Z" fill="#9b7d2a"/>
+        <path d="M2 2 L22 2" stroke="#9b7d2a" stroke-width="1.5"/>
+        <path d="M2 2 L2 22" stroke="#9b7d2a" stroke-width="1.5"/>
+        <circle cx="12" cy="12" r="3" fill="none" stroke="#9b7d2a" stroke-width="1.2"/>
+        <circle cx="12" cy="12" r="1.2" fill="#9b7d2a"/>
+        <path d="M12 8 L12 6 M12 18 L12 16 M8 12 L6 12 M18 12 L16 12" stroke="#9b7d2a" stroke-width="1"/>
+      </svg>
+    </div>
+    <div class="corner br">
+      <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M2 2 L18 2 L18 6 L6 6 L6 18 L2 18 Z" fill="#9b7d2a"/>
+        <path d="M2 2 L22 2" stroke="#9b7d2a" stroke-width="1.5"/>
+        <path d="M2 2 L2 22" stroke="#9b7d2a" stroke-width="1.5"/>
+        <circle cx="12" cy="12" r="3" fill="none" stroke="#9b7d2a" stroke-width="1.2"/>
+        <circle cx="12" cy="12" r="1.2" fill="#9b7d2a"/>
+        <path d="M12 8 L12 6 M12 18 L12 16 M8 12 L6 12 M18 12 L16 12" stroke="#9b7d2a" stroke-width="1"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- The map -->
+  <div id="map"></div>
+
+  <!-- Title cartouche -->
+  <div class="map-title" style="position:fixed; z-index:600;">
+    <div class="tagline">A Guest's Guide to</div>
+    <span class="title-rule"></span>
+    <h1>Catskills<br>Countryside</h1>
+    <span class="title-rule"></span>
+    <div class="subtitle">Andes, New York &amp; Surrounds</div>
+  </div>
+
+  <!-- Category filter -->
+  <div class="category-filter" style="position:fixed; z-index:600;">
+    <h3>Show</h3>
+    <button class="filter-btn active" data-cat="all">
+      <span class="filter-dot" style="background:#9b7d2a;"></span> All Places
+    </button>
+    <button class="filter-btn" data-cat="restaurant">
+      <span class="filter-dot" style="background:#7a1515;"></span> Restaurants &amp; Bars
+    </button>
+    <button class="filter-btn" data-cat="shop">
+      <span class="filter-dot" style="background:#1a4731;"></span> Shops &amp; Markets
+    </button>
+    <button class="filter-btn" data-cat="outdoor">
+      <span class="filter-dot" style="background:#2d4a1a;"></span> Outdoors &amp; Nature
+    </button>
+    <button class="filter-btn" data-cat="attraction">
+      <span class="filter-dot" style="background:#1a3a5c;"></span> Towns &amp; Attractions
+    </button>
+    <button class="filter-btn" data-cat="ski">
+      <span class="filter-dot" style="background:#1c5c78;"></span> Ski &amp; Winter Sports
+    </button>
+  </div>
+
+  <!-- Compass rose -->
+  <div class="compass-wrap" style="position:fixed; z-index:600;">
+    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <!-- Outer ring -->
+      <circle cx="50" cy="50" r="46" fill="rgba(242,230,195,0.9)" stroke="#9b7d2a" stroke-width="1.5"/>
+      <circle cx="50" cy="50" r="42" fill="none" stroke="#c9a94e" stroke-width="0.5"/>
+      <!-- Cardinal tick marks -->
+      <line x1="50" y1="6" x2="50" y2="14" stroke="#9b7d2a" stroke-width="1.5"/>
+      <line x1="50" y1="86" x2="50" y2="94" stroke="#9b7d2a" stroke-width="1.5"/>
+      <line x1="6" y1="50" x2="14" y2="50" stroke="#9b7d2a" stroke-width="1.5"/>
+      <line x1="86" y1="50" x2="94" y2="50" stroke="#9b7d2a" stroke-width="1.5"/>
+      <!-- North arrow (dark) -->
+      <polygon points="50,12 54,42 50,46 46,42" fill="#2c1a08"/>
+      <!-- South arrow (light) -->
+      <polygon points="50,88 54,58 50,54 46,58" fill="#c9a94e"/>
+      <!-- West/East arms -->
+      <polygon points="12,50 42,46 46,50 42,54" fill="#c9a94e"/>
+      <polygon points="88,50 58,46 54,50 58,54" fill="#c9a94e"/>
+      <!-- Center circle -->
+      <circle cx="50" cy="50" r="5" fill="#9b7d2a"/>
+      <circle cx="50" cy="50" r="2.5" fill="#f2e6c3"/>
+      <!-- Cardinal labels -->
+      <text x="50" y="10" text-anchor="middle" font-family="Playfair Display, serif" font-size="9" font-weight="700" fill="#2c1a08">N</text>
+      <text x="50" y="97" text-anchor="middle" font-family="Playfair Display, serif" font-size="8" fill="#9b7d2a">S</text>
+      <text x="5" y="53" text-anchor="middle" font-family="Playfair Display, serif" font-size="8" fill="#9b7d2a">W</text>
+      <text x="95" y="53" text-anchor="middle" font-family="Playfair Display, serif" font-size="8" fill="#9b7d2a">E</text>
+    </svg>
+  </div>
+
+  <!-- Legend -->
+  <div class="map-legend" style="position:fixed; z-index:600;">
+    <h3>Legend</h3>
+    <div class="legend-item">
+      <div class="legend-pin" style="background:#7a1515;"></div> Restaurants &amp; Bars
+    </div>
+    <div class="legend-item">
+      <div class="legend-pin" style="background:#1a4731;"></div> Shops &amp; Markets
+    </div>
+    <div class="legend-item">
+      <div class="legend-pin" style="background:#2d4a1a;"></div> Outdoors &amp; Nature
+    </div>
+    <div class="legend-item">
+      <div class="legend-pin" style="background:#1a3a5c;"></div> Towns &amp; Attractions
+    </div>
+    <div class="legend-item">
+      <div class="legend-pin" style="background:#1c5c78;"></div> Ski &amp; Winter Sports
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+
+    // ═══════════════════════════════════════════════════════════════
+    //  LOCATION DATA — Edit this array to add / remove / update places
+    //
+    //  Fields:
+    //    name        — Display name
+    //    category    — "restaurant" | "shop" | "outdoor" | "attraction"
+    //    lat / lng   — Coordinates (find on Google Maps: right-click → copy coords)
+    //    description — Short blurb (shown in italic)
+    //    hours       — Hours string (or null)
+    //    seasonal    — Seasonal note shown in amber banner (or null)
+    //    phone       — Phone number string (or null)
+    //    website     — Full URL string (or null)
+    //    googleMaps  — Google Maps URL (right-click place → "Share or embed map")
+    // ═══════════════════════════════════════════════════════════════
+
+    const locations = [
+      {"name": "The Andes Hotel", "category": "restaurant", "lat": 42.1769, "lng": -74.7884, "description": "A beloved Catskills institution — casual dining, craft cocktails, and live music in a beautifully restored 19th-century hotel right in the village of Andes.", "hours": "Thu–Sat: 5pm–10pm · Sun: 11am–3pm", "seasonal": "Hours may vary seasonally — call ahead in winter.", "phone": "(845) 676-3980", "website": "https://andeshotel.com", "googleMaps": "https://www.google.com/maps/search/?api=1&query=The+Andes+Hotel+Andes+NY"},
+      {"name": "Brushland Eating House", "category": "restaurant", "lat": 42.221, "lng": -74.737, "description": "Acclaimed farm-to-table restaurant in a converted farmhouse in Bovina Center. Creative seasonal menus sourced directly from local Catskill farms.", "hours": "Fri–Sun: 5pm–9pm", "seasonal": "Schedule changes seasonally — always check website before visiting.", "phone": "(607) 832-4861", "website": "https://brushlandeatinghouse.com", "googleMaps": "https://www.google.com/maps/search/?api=1&query=Brushland+Eating+House+Bovina+Center+NY"},
+      {"name": "The Bull & Garland", "category": "restaurant", "lat": 42.3467, "lng": -74.6631, "description": "An authentic British pub tucked away in the charming village of Hobart. Classic pub food, real ales on draught, and a wonderfully genuine neighborhood atmosphere.", "hours": "Wed–Sun: 12pm–10pm", "seasonal": null, "phone": "(607) 538-9367", "website": null, "googleMaps": "https://www.google.com/maps/search/?api=1&query=The+Bull+and+Garland+Hobart+NY"},
+      {"name": "Peekamoose Restaurant", "category": "restaurant", "lat": 42.0058, "lng": -74.5372, "description": "Chef Devin Mills' highly regarded fine dining destination in Big Indian. Elegant seasonal cuisine, an outstanding wine program, and a romantic setting.", "hours": "Thu–Mon: 5pm–9pm", "seasonal": "Closed Tuesdays & Wednesdays. Reservations strongly recommended.", "phone": "(845) 254-6500", "website": "https://peekamooserestaurant.com", "googleMaps": "https://www.google.com/maps/search/?api=1&query=Peekamoose+Restaurant+Big+Indian+NY"},
+      {"name": "Pakatakan Farmers Market", "category": "shop", "lat": 42.1608, "lng": -74.5842, "description": "One of the Catskills' best farmers markets, held in the stunning octagonal Halcottsville barn. Fresh produce, local dairy, baked goods, meat, flowers, and crafts.", "hours": "Saturdays: 9am–1pm", "seasonal": "Open June through October only.", "phone": null, "website": "https://rondondfarmersmarket.org", "googleMaps": "https://www.google.com/maps/search/?api=1&query=Pakatakan+Farmers+Market+Halcottsville+NY"},
+      {"name": "Catskill Distilling Co.", "category": "shop", "lat": 41.9067, "lng": -74.8417, "description": "Award-winning craft distillery producing whiskey, gin, and vodka from local grains. Tours, tastings, and a beautiful tasting room in Bethel.", "hours": "Mon–Thu: 12pm–6pm · Fri–Sun: 11am–8pm", "seasonal": null, "phone": "(845) 583-3141", "website": "https://catskillsdistilling.com", "googleMaps": "https://www.google.com/maps/search/?api=1&query=Catskill+Distilling+Company+Bethel+NY"},
+      {"name": "Binnekill Square", "category": "shop", "lat": 42.1456, "lng": -74.6497, "description": "Charming shopping district along the stream in Margaretville. Independent boutiques, antiques, art galleries, specialty food, and the Catskill Center gift shop.", "hours": "Varies by shop", "seasonal": null, "phone": null, "website": null, "googleMaps": "https://www.google.com/maps/search/?api=1&query=Binnekill+Square+Margaretville+NY"},
+      {"name": "Pepacton Reservoir", "category": "outdoor", "lat": 42.0933, "lng": -74.9017, "description": "One of New York City's largest reservoirs — a stunning expanse of still water surrounded by forested hills. Exceptional birdwatching, scenic drives, and fishing (NYS fishing license + permit required).", "hours": "Open year-round", "seasonal": "Fall foliage is spectacular mid-October. Winter views are dramatic.", "phone": null, "website": null, "googleMaps": "https://www.google.com/maps/search/?api=1&query=Pepacton+Reservoir+NY"},
+      {"name": "Belleayre Mountain", "category": "ski", "lat": 42.136, "lng": -74.527, "description": "State-owned ski resort in Highmount — 50+ trails, terrain parks, and a gondola. Also offers hiking, mountain biking, and summer concerts. Great for all skill levels.", "hours": "Ski season: Dec–Mar · Summer: Jun–Oct", "seasonal": "Night skiing on select dates; check website for conditions.", "phone": "(845) 254-5600", "website": "https://belleayre.com", "googleMaps": "https://www.google.com/maps/search/?api=1&query=Belleayre+Mountain+Highmount+NY"},
+      {"name": "Hunter Mountain", "category": "ski", "lat": 42.1803, "lng": -74.2267, "description": "One of the largest ski resorts in the Catskills with 67 trails and extensive snowmaking. About 30 miles east of Andes. Strong intermediate and expert terrain.", "hours": "Ski season: Nov–Apr", "seasonal": "100% snowmaking coverage keeps the mountain open even in warm winters.", "phone": "(518) 263-4223", "website": "https://huntermtn.com", "googleMaps": "https://www.google.com/maps/search/?api=1&query=Hunter+Mountain+Hunter+NY"},
+      {"name": "Windham Mountain", "category": "ski", "lat": 42.2958, "lng": -74.2442, "description": "Family-friendly resort with 54 trails and a relaxed Catskills vibe. About 35 miles east. Known for excellent grooming and a welcoming atmosphere for beginners.", "hours": "Ski season: Nov–Apr", "seasonal": "First Tracks program offers early morning groomed runs before lifts open to the public.", "phone": "(518) 734-4300", "website": "https://windhammountain.com", "googleMaps": "https://www.google.com/maps/search/?api=1&query=Windham+Mountain+Windham+NY"},
+      {"name": "Balsam Lake Mtn. Trail", "category": "outdoor", "lat": 42.0856, "lng": -74.6147, "description": "A Catskill 3500 peak with a restored fire tower offering sweeping 360° views. A rewarding moderate hike — roughly 5.5 miles round trip with 1,000 ft. elevation gain.", "hours": "Open year-round (weather permitting)", "seasonal": "Trail may be icy or snowy December–March. Microspikes recommended.", "phone": null, "website": null, "googleMaps": "https://www.google.com/maps/search/?api=1&query=Balsam+Lake+Mountain+Trailhead+NY"},
+      {"name": "Catskill Center Trails", "category": "outdoor", "lat": 42.1558, "lng": -74.6129, "description": "The Catskill Center stewards dozens of miles of trail across their preserve properties. Stop by or visit their website for trail maps, guided hikes, and conservation programs.", "hours": "Trails open dawn to dusk", "seasonal": null, "phone": "(845) 586-2611", "website": "https://catskillcenter.org", "googleMaps": "https://www.google.com/maps/search/?api=1&query=Catskill+Center+Arkville+NY"},
+      {"name": "Delhi NY", "category": "attraction", "lat": 42.2784, "lng": -74.9192, "description": "The Delaware County seat — a friendly small town with a great diner, hardware store, supermarket (Price Chopper), library, and SUNY Delaware campus. Best bet for larger grocery runs.", "hours": "Town open year-round", "seasonal": null, "phone": null, "website": null, "googleMaps": "https://www.google.com/maps/search/?api=1&query=Delhi+NY"},
+      {"name": "Margaretville NY", "category": "attraction", "lat": 42.1456, "lng": -74.6497, "description": "A lively Catskills village along the East Branch of the Delaware. Restaurants, shops, a pharmacy, Freshtown grocery, the Margaretville Hospital, and Binnekill Square.", "hours": "Town open year-round", "seasonal": null, "phone": null, "website": null, "googleMaps": "https://www.google.com/maps/search/?api=1&query=Margaretville+NY"},
+      {"name": "Roxbury NY", "category": "attraction", "lat": 42.2958, "lng": -74.5626, "description": "Charming hamlet birthplace of naturalist John Burroughs and financier Jay Gould. Visit the Kirkside Park gazebo, local galleries, and the excellent Roxbury Motel with its famous theme rooms.", "hours": "Town open year-round", "seasonal": null, "phone": null, "website": null, "googleMaps": "https://www.google.com/maps/search/?api=1&query=Roxbury+NY"},
+    ]; // ← End of locations array. Add new entries above this line.
+
+
+    // ═══════════════════════════════════════════════════════════════
+    //  MAP SETUP — Adjust center/zoom here if needed
+    // ═══════════════════════════════════════════════════════════════
+
+    const map = L.map('map', {
+      center: [42.185, -74.76],   // Andes, NY (nudged slightly to account for UI)
+      zoom: 12,
+      zoomControl: false,         // we add a custom-positioned one below
+      scrollWheelZoom: true,
+      doubleClickZoom: true,
+      dragging: true,
+      boxZoom: true,
+      keyboard: true,
+      touchZoom: true,
+    });
+
+    // Place zoom control above the legend (bottom-right, offset to clear the legend)
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+    // CartoDB Voyager — global CDN, 3-5× faster than OpenTopoMap
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
+      subdomains: 'abcd',
+      maxZoom: 19,
+      updateWhenIdle: true,
+      keepBuffer: 1,
+    }).addTo(map);
+
+
+    // ═══════════════════════════════════════════════════════════════
+    //  TERRAIN LAYER — ESRI World Hillshade (grayscale, CDN-fast)
+    //  mix-blend-mode: multiply makes white transparent and dark
+    //  shadow areas darken the map, adding topographic depth.
+    // ═══════════════════════════════════════════════════════════════
+
+    map.createPane('hillPane');
+    map.getPane('hillPane').style.zIndex = 310;
+    map.getPane('hillPane').style.pointerEvents = 'none';
+    map.getPane('hillPane').style.mixBlendMode = 'multiply';
+    // Warm the hillshade before blending so shadows are amber/brown, not cold gray
+    map.getPane('hillPane').style.filter = 'sepia(0.65) brightness(1.05)';
+
+    // ArcGIS tiles use {z}/{y}/{x} order (row before column)
+    L.tileLayer(
+      'https://services.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}',
+      {
+        pane: 'hillPane',
+        opacity: 0.28,
+        maxZoom: 16,
+        attribution: 'Hillshade: &copy; <a href="https://www.esri.com/">Esri</a>',
+        updateWhenIdle: true,
+        keepBuffer: 1,
+      }
+    ).addTo(map);
+
+
+    // Water is visible via CartoDB's native blue under the lighter sepia filter.
+    // (Removed the OSM color-blend overlay — it was desaturating roads.)
+
+
+    // ═══════════════════════════════════════════════════════════════
+    //  MARKER ICONS
+    // ═══════════════════════════════════════════════════════════════
+
+    const catConfig = {
+      restaurant: { color: '#7a1515', label: 'R',  name: 'Restaurant'      },
+      shop:       { color: '#1a4731', label: 'S',  name: 'Shop'            },
+      outdoor:    { color: '#2d4a1a', label: 'O',  name: 'Outdoors'        },
+      attraction: { color: '#1a3a5c', label: 'A',  name: 'Attraction'      },
+      // Mountain SVG icon: main peak + snow-cap highlight
+      ski: {
+        color: '#1c5c78',
+        name: 'Ski & Winter Sports',
+        svgIcon: `<path d="M6,21 L14,7 L22,21 Z" fill="#f2e6c3" opacity="0.92"/>
+                  <path d="M11,13.5 L14,7 L17,13.5 Z" fill="white" opacity="0.65"/>`,
+      },
+    };
+
+    function makeIcon(category) {
+      const c = catConfig[category] || { color: '#4a2e0a', label: '•' };
+
+      // Markers are 30% smaller: 28×40 → 20×28 (viewBox unchanged so paths stay identical)
+      const inner = c.svgIcon
+        ? c.svgIcon
+        : `<text x="14" y="18.5" text-anchor="middle"
+                 font-family="Playfair Display, Georgia, serif"
+                 font-size="9.5" font-weight="700" fill="#f2e6c3">${c.label}</text>`;
+
+      const svg = `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 40" width="20" height="28">
+          <filter id="sh">
+            <feDropShadow dx="1" dy="2" stdDeviation="1.5" flood-color="#000" flood-opacity="0.4"/>
+          </filter>
+          <g filter="url(#sh)">
+            <path d="M14 2 C7.4 2 2 7.4 2 14 C2 23 14 38 14 38 C14 38 26 23 26 14 C26 7.4 20.6 2 14 2Z"
+                  fill="${c.color}" stroke="#f2e6c3" stroke-width="1.4"/>
+            <circle cx="14" cy="14" r="7.5" fill="rgba(255,255,255,0.18)"/>
+          </g>
+          ${inner}
+        </svg>`;
+
+      return L.divIcon({
+        html: `<div class="map-pin">${svg}</div>`,
+        className: '',
+        iconSize:    [20, 28],
+        iconAnchor:  [10, 28],
+        popupAnchor: [0, -30],
+      });
+    }
+
+
+    // ═══════════════════════════════════════════════════════════════
+    //  POPUP CONTENT
+    // ═══════════════════════════════════════════════════════════════
+
+    function makePopup(loc) {
+      const cat = catConfig[loc.category] || { name: '' };
+      const hoursHTML = loc.hours
+        ? `<div class="popup-detail"><span class="popup-detail-label">Hours</span>${loc.hours}</div>` : '';
+      const phoneHTML = loc.phone
+        ? `<div class="popup-detail"><span class="popup-detail-label">Phone</span><a href="tel:${loc.phone}" style="color:inherit;">${loc.phone}</a></div>` : '';
+      const seasonHTML = loc.seasonal
+        ? `<div class="popup-seasonal">&#9670; ${loc.seasonal}</div>` : '';
+
+      const websiteBtn = loc.website
+        ? `<a class="popup-btn" href="${loc.website}" target="_blank" rel="noopener">Website</a>` : '';
+      const mapsBtn = loc.googleMaps
+        ? `<a class="popup-btn primary" href="${loc.googleMaps}" target="_blank" rel="noopener">Open in Maps</a>` : '';
+
+      return `
+        <div class="popup-header">
+          <div class="popup-category-label">${cat.name}</div>
+          <div class="popup-name">${loc.name}</div>
+        </div>
+        <div class="popup-body">
+          <p class="popup-description">${loc.description}</p>
+          ${hoursHTML}
+          ${phoneHTML}
+          ${seasonHTML}
+          <div class="popup-actions">
+            ${websiteBtn}
+            ${mapsBtn}
+          </div>
+        </div>`;
+    }
+
+
+    // ═══════════════════════════════════════════════════════════════
+    //  ADD MARKERS
+    // ═══════════════════════════════════════════════════════════════
+
+    const markerList = [];
+
+    locations.forEach(loc => {
+      const marker = L.marker([loc.lat, loc.lng], { icon: makeIcon(loc.category) })
+        .bindPopup(makePopup(loc), {
+          maxWidth: 360,
+          minWidth: 300,
+          autoPanPaddingTopLeft:    L.point(370, 80),  // clears the filter panel
+          autoPanPaddingBottomRight: L.point(140, 110), // clears legend + zoom
+        })
+        .addTo(map);
+
+      markerList.push({ marker, category: loc.category });
+    });
+
+
+    // ═══════════════════════════════════════════════════════════════
+    //  CATEGORY FILTER
+    // ═══════════════════════════════════════════════════════════════
+
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', function () {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+
+        const cat = this.dataset.cat;
+        markerList.forEach(({ marker, category }) => {
+          if (cat === 'all' || category === cat) {
+            if (!map.hasLayer(marker)) map.addLayer(marker);
+          } else {
+            if (map.hasLayer(marker)) map.removeLayer(marker);
+          }
+        });
+
+        map.closePopup();
+      });
+    });
+
+  </script>
+</body>
+</html>
