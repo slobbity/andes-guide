@@ -95,6 +95,7 @@ def load_locations():
                 "phone":       nullable("phone"),
                 "website":     nullable("website"),
                 "googleMaps":  nullable("googleMaps"),
+                "instagram":   nullable("instagram"),
                 "driving_time_minutes": driving_time,
             })
 
