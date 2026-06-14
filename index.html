@@ -384,7 +384,8 @@
     const groupsEl = document.getElementById('groups');
 
     catOrder.forEach(cat => {
-      const members = items.map((it, i) => ({ it, i })).filter(x => x.it.cat === cat);
+      const members = items.map((it, i) => ({ it, i })).filter(x => x.it.cat === cat)
+        .sort((a, b) => (a.it.loc.driving_time_minutes || 999) - (b.it.loc.driving_time_minutes || 999));
       if (!members.length) return;
 
       const section = document.createElement('section');
