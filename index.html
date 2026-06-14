@@ -451,15 +451,9 @@
         it.el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
       }
       if (pan) {
-        // Smooth pan to marker, centered in the visible map area (accounting for sidebar)
+        // Smooth pan and zoom to marker, centered in the visible map area
         const latlng = it.marker.getLatLng();
-        const bounds = L.latLngBounds(latlng, latlng);
-        map.fitBounds(bounds, {
-          paddingTopLeft: [550, 100],
-          paddingBottomRight: [150, 150],
-          maxZoom: 13,
-          duration: 1.2
-        });
+        map.flyTo(latlng, 15, { duration: 1.2 });
       }
       it.marker.openPopup();
     }
