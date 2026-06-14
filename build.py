@@ -39,7 +39,7 @@ HTML_FILE = HERE / "index.html"
 START_MARKER = "const locations = ["
 END_MARKER   = "]; // ← End of locations array."
 
-VALID_CATEGORIES = {"restaurant", "shop", "outdoor", "attraction", "ski"}
+VALID_CATEGORIES = {"restaurant", "cafe", "bar", "food", "shop", "outdoor", "attraction", "ski"}
 
 
 def load_locations():
