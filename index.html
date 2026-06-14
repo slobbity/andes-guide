@@ -475,12 +475,25 @@
       const head = document.createElement('h2');
       head.className = 'cat-head';
       head.dataset.cat = cat;
-      head.innerHTML = `<span class="caret">▼</span><span class="tick"></span>${catConfig[cat].name}<span class="count">${members.length}</span>`;
-      head.title = 'Click to toggle visibility, Cmd/Ctrl-click to collapse/expand';
-      head.addEventListener('click', (e) => {
-        if (e.ctrlKey || e.metaKey) toggleCollapse(cat, head, section);
-        else toggleCat(cat, head, section);
+      const caret = document.createElement('span');
+      caret.className = 'caret';
+      caret.textContent = '▼';
+      caret.title = 'Click arrow to collapse/expand';
+      caret.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleCollapse(cat, head, section);
       });
+      head.appendChild(caret);
+      const tick = document.createElement('span');
+      tick.className = 'tick';
+      head.appendChild(tick);
+      head.appendChild(document.createTextNode(catConfig[cat].name));
+      const count = document.createElement('span');
+      count.className = 'count';
+      count.textContent = members.length;
+      head.appendChild(count);
+      head.title = 'Click heading to hide/show category on map';
+      head.addEventListener('click', () => toggleCat(cat, head, section));
       section.appendChild(head);
 
       members.forEach(({ it, i }) => {
