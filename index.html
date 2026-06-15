@@ -378,9 +378,9 @@
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
       subdomains: 'abcd', maxZoom: 19,
-      updateWhenIdle: true,       // only fetch tiles once panning settles
-      updateWhenZooming: false,   // don't fetch intermediate zooms mid-fly (kills the stutter)
-      keepBuffer: 4,              // keep more surrounding tiles cached so the start view stays painted
+      updateWhenIdle: false,      // load tiles continuously while moving, not only after it stops
+      updateWhenZooming: true,    // load tiles during the zoom too, so the landing isn't blank
+      keepBuffer: 6,              // retain a wide ring of tiles so revisited areas are already cached
     }).addTo(map);
 
     // Reference point: Andes village
