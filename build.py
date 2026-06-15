@@ -11,10 +11,22 @@ Edit locations.csv to add, remove, or update places.
 Then run this script and refresh index.html in your browser.
 
 CSV columns (header row, exact names):
-    include, name, category, lat, lng, description, hours,
-    seasonal, phone, website, googleMaps
+    include, name, category, lat, lng, description,
+    mon, tue, wed, thu, fri, sat, sun, hours,
+    seasonal, phone, website, googleMaps, instagram
 
-Valid categories: restaurant | shop | outdoor | attraction | ski
+Valid categories: restaurant | cafe | bar | food | shop | outdoor | attraction | ski
+
+HOURS — the seven day columns (mon … sun) are the source of truth.
+Put that day's hours in the cell, e.g. "9am-3pm", or two blocks
+"9am-3pm, 5pm-9pm", or "open" if open with no fixed time. Leave a day
+blank to mean CLOSED that day. From these, the build:
+  • auto-generates the display text (collapsing runs, e.g. "Thu-Sun: 9am-3pm")
+  • drives the grey-out (a place is dimmed when it's closed right now)
+The "hours" column is an OPTIONAL display override — leave it blank to
+use the auto-generated text; fill it only when you want custom wording
+(e.g. a place with two venues). Places with no day columns (towns,
+trails, ski resorts) just keep free text in "hours" and are never dimmed.
 
 The "include" column controls what appears on the map: leave it blank
 or set yes / y / true / 1 to show a place; set no / n / false / 0 to
@@ -40,6 +52,78 @@ START_MARKER = "const locations = ["
 END_MARKER   = "]; // ← End of locations array."
 
 VALID_CATEGORIES = {"restaurant", "cafe", "bar", "food", "shop", "outdoor", "attraction", "ski"}
+
+DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+DAY_LABEL = {"mon": "Mon", "tue": "Tue", "wed": "Wed", "thu": "Thu",
+             "fri": "Fri", "sat": "Sat", "sun": "Sun"}
+NDASH = "–"   # – for ranges
+MIDDOT = " · "  # · between blocks
+
+
+def fmt_times(cell):
+    """Prettify a day cell's time list: '9am-3pm, 5pm-9pm' → '9am–3pm, 5pm–9pm'."""
+    parts = [p.strip().replace("-", NDASH) for p in cell.split(",")]
+    return ", ".join(parts)
+
+
+def rotation_start(vals):
+    """Index to start the week at, so open stretches don't split across the
+    Mon/Sun boundary — i.e. the day right after the longest run of closed days."""
+    n = len(vals)
+    blanks = [i for i, v in enumerate(vals) if not v]
+    if not blanks:
+        return 0
+    total_blank = len(blanks)
+    best_len = best_start = 0
+    cur_len = cur_start = 0
+    for idx in range(2 * n):
+        d = idx % n
+        if not vals[d]:
+            if cur_len == 0:
+                cur_start = d
+            cur_len += 1
+            if cur_len > best_len:
+                best_len, best_start = cur_len, cur_start
+        else:
+            cur_len = 0
+        if best_len == total_blank:
+            break
+    return (best_start + best_len) % n
+
+
+def generate_hours_text(days):
+    """Build a display string from the seven day cells, collapsing consecutive
+    days with identical hours (e.g. 'Thu–Sun: 9am–3pm · Sun: 10am–3pm')."""
+    vals = [days.get(d, "").strip() for d in DAYS]
+    if not any(vals):
+        return None
+
+    nonblank = [v for v in vals if v]
+    if len(nonblank) == 7 and len(set(nonblank)) == 1:
+        v = nonblank[0]
+        return "Open daily" if v.lower() == "open" else f"Daily: {fmt_times(v)}"
+
+    start = rotation_start(vals)
+    order = [(start + k) % 7 for k in range(7)]
+
+    groups = []  # each: [list_of_day_indices, value]
+    for d in order:
+        v = vals[d]
+        if not v:
+            continue
+        if groups and groups[-1][1] == v and (groups[-1][0][-1] + 1) % 7 == d:
+            groups[-1][0].append(d)
+        else:
+            groups.append([[d], v])
+
+    parts = []
+    for didx, v in groups:
+        if len(didx) == 1:
+            label = DAY_LABEL[DAYS[didx[0]]]
+        else:
+            label = f"{DAY_LABEL[DAYS[didx[0]]]}{NDASH}{DAY_LABEL[DAYS[didx[-1]]]}"
+        parts.append(label if v.lower() == "open" else f"{label}: {fmt_times(v)}")
+    return MIDDOT.join(parts)
 
 
 def load_locations():
@@ -84,13 +168,25 @@ def load_locations():
             except ValueError:
                 pass
 
+            # Seven day columns → structured `days` map + display `hours`.
+            day_cells = {d: row.get(d, "").strip() for d in DAYS}
+            has_days = any(day_cells.values())
+            override = row.get("hours", "").strip()
+            if has_days:
+                days_out = day_cells
+                hours_out = override if override else generate_hours_text(day_cells)
+            else:
+                days_out = None
+                hours_out = override if override else None
+
             locations.append({
                 "name":        name,
                 "category":    category,
                 "lat":         lat,
                 "lng":         lng,
                 "description": nullable("description"),
-                "hours":       nullable("hours"),
+                "days":        days_out,
+                "hours":       hours_out,
                 "seasonal":    nullable("seasonal"),
                 "phone":       nullable("phone"),
                 "website":     nullable("website"),

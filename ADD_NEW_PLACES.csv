@@ -1,2 +1,15 @@
-include,name,category,lat,lng,description,hours,seasonal,phone,website,googleMaps,note
-Location,"Coordinates (Lat, Long)",Website,42.2784,-74.9192,Classic diner with great pies and coffee.,Mon–Sun: 6am–9pm,,,,https://www.google.com/maps/search/?api=1&query=Delhi+Diner+Delhi+NY,Your personal notes here
+include,name,category,lat,lng,description,mon,tue,wed,thu,fri,sat,sun,hours,seasonal,phone,website,googleMaps,instagram,driving_time_minutes,note
+yes,Example Diner,restaurant,42.2784,-74.9192,Classic diner with great pies and coffee.,6am-9pm,6am-9pm,6am-9pm,6am-9pm,6am-9pm,6am-9pm,8am-2pm,,,(607) 555-1234,https://example.com,https://www.google.com/maps/search/?api=1&query=Example+Diner+Delhi+NY,https://instagram.com/examplediner/,15,Your private notes here (ignored by build)
+# --- HOW TO FILL THIS OUT -------------------------------------------------
+# category : restaurant | cafe | bar | food | shop | outdoor | attraction | ski
+# mon..sun : that day's hours, e.g. 9am-3pm  (two blocks: 9am-3pm, 5pm-9pm)
+#            leave a day BLANK = closed that day;  write 'open' if open with
+#            no fixed time. The site auto-builds the display text AND uses
+#            these to grey out places that are closed right now.
+# hours    : OPTIONAL display override — leave blank to use the auto text;
+#            fill only for custom wording (e.g. a place with two venues).
+#            Places with NO day columns (towns, trails, ski) just put free
+#            text here (e.g. "Open year-round") and are never greyed out.
+# seasonal : free text about months/season; drives the 12-month open strip.
+# include  : yes (or blank) shows it; no/false/0 hides without deleting.
+# Edit in a PLAIN-TEXT editor only (VS Code / BBEdit) — never Excel/Numbers.
