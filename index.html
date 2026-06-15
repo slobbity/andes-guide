@@ -377,7 +377,10 @@
     // CartoDB Positron — minimal, desaturated, water reads naturally
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
-      subdomains: 'abcd', maxZoom: 19, updateWhenIdle: true, keepBuffer: 1,
+      subdomains: 'abcd', maxZoom: 19,
+      updateWhenIdle: true,       // only fetch tiles once panning settles
+      updateWhenZooming: false,   // don't fetch intermediate zooms mid-fly (kills the stutter)
+      keepBuffer: 4,              // keep more surrounding tiles cached so the start view stays painted
     }).addTo(map);
 
     // Reference point: Andes village
