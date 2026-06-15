@@ -110,13 +110,13 @@
     .yearround{font-family:var(--serif);font-style:italic;font-size:12.5px;color:var(--ink-faint);}
 
     .entry-note{font-size:11.5px;font-style:italic;color:#8a6a3a;margin-top:7px;line-height:1.45;}
-    .entry-links{display:flex;flex-wrap:wrap;gap:6px;margin-top:11px;}
-    .entry-links a{font-family:var(--sans);font-size:10.5px;line-height:1;
-      letter-spacing:.02em;color:var(--ink-soft);text-decoration:none;
-      background:#f4f2e7;border:1px solid var(--rule);border-radius:999px;
-      padding:5px 11px;white-space:nowrap;
+    .entry-links{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px;}
+    .entry-links a{display:inline-flex;align-items:center;justify-content:center;
+      width:32px;height:32px;color:var(--ink-soft);background:#f4f2e7;
+      border:1px solid var(--rule);border-radius:9px;
       transition:background .13s,color .13s,border-color .13s;}
     .entry-links a:hover{background:var(--cat);border-color:var(--cat);color:var(--bg);}
+    .entry-links svg{display:block;width:16px;height:16px;}
 
     /* ── Map (the "overview") ────────────────────────────────────── */
     #map{flex:1;height:100%;background:#eef0ec;}
@@ -156,13 +156,13 @@
     .pp-cat{font-family:var(--sans);font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-faint);}
     .pp-name{font-family:var(--serif);font-size:18px;line-height:1.13;margin-top:2px;}
     .pp-hours{font-family:var(--sans);font-size:11.5px;color:var(--ink-soft);margin-top:7px;}
-    .pp-links{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px;}
-    .pp-links a{font-family:var(--sans);font-size:10px;line-height:1;
-      letter-spacing:.02em;color:var(--ink-soft);text-decoration:none;
-      background:#f4f2e7;border:1px solid #cfcec1;border-radius:999px;
-      padding:4px 10px;white-space:nowrap;
+    .pp-links{display:flex;flex-wrap:wrap;gap:6px;margin-top:11px;}
+    .pp-links a{display:inline-flex;align-items:center;justify-content:center;
+      width:29px;height:29px;color:var(--ink-soft);background:#f4f2e7;
+      border:1px solid #cfcec1;border-radius:8px;
       transition:background .13s,color .13s,border-color .13s;}
     .pp-links a:hover{background:var(--cat,#43433d);border-color:var(--cat,#43433d);color:var(--bg);}
+    .pp-links svg{display:block;width:15px;height:15px;}
 
     /* ── Lightbox (trail maps) ───────────────────────────────────── */
     .lightbox{position:fixed;inset:0;z-index:1000;display:flex;flex-direction:column;
@@ -426,12 +426,29 @@
     //  MAP MARKERS — small precise dots, color = category
     // ═══════════════════════════════════════════════════════════════
 
+    // Inline SVG icons (currentColor → tint with the chiclet, invert on hover).
+    const ICON = {
+      website:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="9.2"/><path d="M2.8 12h18.4"/><path d="M12 2.8c2.5 2.5 3.9 5.8 3.9 9.2s-1.4 6.7-3.9 9.2c-2.5-2.5-3.9-5.8-3.9-9.2S9.5 5.3 12 2.8z"/></svg>',
+      instagram:  '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.16c3.2 0 3.58.01 4.85.07 1.17.05 1.8.25 2.23.41.56.22.96.48 1.38.9.42.42.68.82.9 1.38.16.43.36 1.06.41 2.23.06 1.27.07 1.65.07 4.85s-.01 3.58-.07 4.85c-.05 1.17-.25 1.8-.41 2.23-.22.56-.48.96-.9 1.38-.42.42-.82.68-1.38.9-.43.16-1.06.36-2.23.41-1.27.06-1.65.07-4.85.07s-3.58-.01-4.85-.07c-1.17-.05-1.8-.25-2.23-.41-.56-.22-.96-.48-1.38-.9-.42-.42-.68-.82-.9-1.38-.16-.43-.36-1.06-.41-2.23-.06-1.27-.07-1.65-.07-4.85s.01-3.58.07-4.85c.05-1.17.25-1.8.41-2.23.22-.56.48-.96.9-1.38.42-.42.82-.68 1.38-.9.43-.16 1.06-.36 2.23-.41C8.42 2.17 8.8 2.16 12 2.16zM12 0C8.74 0 8.33.01 7.05.07 5.78.13 4.9.33 4.14.63c-.79.31-1.46.72-2.13 1.38C1.35 2.68.94 3.35.63 4.14.33 4.9.13 5.78.07 7.05.01 8.33 0 8.74 0 12s.01 3.67.07 4.95c.06 1.27.26 2.15.56 2.91.31.79.72 1.46 1.38 2.13.67.66 1.34 1.07 2.13 1.38.76.3 1.64.5 2.91.56C8.33 23.99 8.74 24 12 24s3.67-.01 4.95-.07c1.27-.06 2.15-.26 2.91-.56.79-.31 1.46-.72 2.13-1.38.66-.67 1.07-1.34 1.38-2.13.3-.76.5-1.64.56-2.91.06-1.28.07-1.69.07-4.95s-.01-3.67-.07-4.95c-.06-1.27-.26-2.15-.56-2.91-.31-.79-.72-1.46-1.38-2.13-.67-.66-1.34-1.07-2.13-1.38-.76-.3-1.64-.5-2.91-.56C15.67.01 15.26 0 12 0zm0 5.84A6.16 6.16 0 1 0 18.16 12 6.16 6.16 0 0 0 12 5.84zM12 16a4 4 0 1 1 4-4 4 4 0 0 1-4 4zm6.41-10.85a1.44 1.44 0 1 0 1.44 1.44 1.44 1.44 0 0 0-1.44-1.44z"/></svg>',
+      phone:      '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.62 10.79a15.15 15.15 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24 11.36 11.36 0 0 0 3.57.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1 11.36 11.36 0 0 0 .57 3.57 1 1 0 0 1-.25 1.02l-2.2 2.2z"/></svg>',
+      directions: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>',
+      trailmap:   '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M14 6l-3.75 5 2.85 3.8-1.6 1.2C9.81 13.75 7 10 7 10l-6 8h22L14 6z"/></svg>',
+    };
+
+    // Build one icon chiclet. opts: {cls, data, tel}
+    function chip(href, icon, label, opts) {
+      opts = opts || {};
+      const cls = opts.cls ? ` class="${opts.cls}"` : '';
+      const tgt = opts.tel ? '' : ' target="_blank" rel="noopener"';
+      return `<a href="${href}"${cls} title="${label}" aria-label="${label}"${opts.data || ''}${tgt}>${icon}</a>`;
+    }
+
     function popupHTML(loc) {
       const links = [];
-      if (loc.website)    links.push(`<a href="${loc.website}" target="_blank" rel="noopener">Website</a>`);
-      if (loc.trailmap)   links.push(`<a href="${loc.trailmap}" class="trailmap-link" data-title="${loc.name}" target="_blank" rel="noopener">Trail map</a>`);
-      if (loc.instagram)  links.push(`<a href="${loc.instagram}" target="_blank" rel="noopener">Instagram</a>`);
-      if (loc.googleMaps) links.push(`<a href="${loc.googleMaps}" target="_blank" rel="noopener">Directions</a>`);
+      if (loc.website)    links.push(chip(loc.website, ICON.website, 'Website'));
+      if (loc.trailmap)   links.push(chip(loc.trailmap, ICON.trailmap, 'Trail map', { cls: 'trailmap-link', data: ` data-title="${loc.name}"` }));
+      if (loc.instagram)  links.push(chip(loc.instagram, ICON.instagram, 'Instagram'));
+      if (loc.googleMaps) links.push(chip(loc.googleMaps, ICON.directions, 'Directions'));
       return `<div class="pp" style="--cat:${catConfig[loc.category].color}">
         <div class="pp-cat">${catConfig[loc.category].name}</div>
         <div class="pp-name">${loc.name}</div>
@@ -573,11 +590,11 @@
 
     function linksHTML(loc) {
       const links = [];
-      if (loc.website)    links.push(`<a href="${loc.website}" target="_blank" rel="noopener">Website</a>`);
-      if (loc.trailmap)   links.push(`<a href="${loc.trailmap}" class="trailmap-link" data-title="${loc.name}" target="_blank" rel="noopener">Trail map</a>`);
-      if (loc.instagram)  links.push(`<a href="${loc.instagram}" target="_blank" rel="noopener">Instagram</a>`);
-      if (loc.phone)      links.push(`<a href="tel:${loc.phone.replace(/[^0-9+]/g, '')}">${loc.phone}</a>`);
-      if (loc.googleMaps) links.push(`<a href="${loc.googleMaps}" target="_blank" rel="noopener">Directions</a>`);
+      if (loc.website)    links.push(chip(loc.website, ICON.website, 'Website'));
+      if (loc.trailmap)   links.push(chip(loc.trailmap, ICON.trailmap, 'Trail map', { cls: 'trailmap-link', data: ` data-title="${loc.name}"` }));
+      if (loc.instagram)  links.push(chip(loc.instagram, ICON.instagram, 'Instagram'));
+      if (loc.phone)      links.push(chip('tel:' + loc.phone.replace(/[^0-9+]/g, ''), ICON.phone, 'Call ' + loc.phone, { tel: true }));
+      if (loc.googleMaps) links.push(chip(loc.googleMaps, ICON.directions, 'Directions'));
       if (!links.length) return '';
       return `<div class="entry-links">${links.join('')}</div>`;
     }
