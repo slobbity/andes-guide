@@ -602,7 +602,17 @@
       if (pan) {
         // Smooth pan and zoom to marker, centered in the visible map area
         const latlng = it.marker.getLatLng();
-        map.flyTo(latlng, 17, { duration: 1.2 });
+        // On a big zoom jump (e.g. the first selection from the wide overview),
+        // Leaflet scales the whole vector overlay during the fly — which blows
+        // the dots up huge and pixelated for a moment. Hide the overlay for the
+        // duration of that fly and restore it crisp when the fly lands.
+        const overlay = map.getPane('overlayPane');
+        const FLY_DURATION = 1.2;
+        if (overlay && Math.abs(map.getZoom() - 17) >= 3) {
+          overlay.style.visibility = 'hidden';
+          setTimeout(() => { overlay.style.visibility = ''; }, FLY_DURATION * 1000 + 120);
+        }
+        map.flyTo(latlng, 17, { duration: FLY_DURATION });
       }
       it.marker.openPopup();
     }
