@@ -110,10 +110,13 @@
     .yearround{font-family:var(--serif);font-style:italic;font-size:12.5px;color:var(--ink-faint);}
 
     .entry-note{font-size:11.5px;font-style:italic;color:#8a6a3a;margin-top:7px;line-height:1.45;}
-    .entry-links{font-family:var(--sans);font-size:11.5px;margin-top:9px;}
-    .entry-links a{color:var(--ink-soft);text-decoration:none;border-bottom:1px solid var(--rule);}
-    .entry-links a:hover{color:var(--ink);border-color:currentColor;}
-    .entry-links .sep{color:var(--rule);margin:0 8px;}
+    .entry-links{display:flex;flex-wrap:wrap;gap:6px;margin-top:11px;}
+    .entry-links a{font-family:var(--sans);font-size:10.5px;line-height:1;
+      letter-spacing:.02em;color:var(--ink-soft);text-decoration:none;
+      background:#f4f2e7;border:1px solid var(--rule);border-radius:999px;
+      padding:5px 11px;white-space:nowrap;
+      transition:background .13s,color .13s,border-color .13s;}
+    .entry-links a:hover{background:var(--cat);border-color:var(--cat);color:var(--bg);}
 
     /* ── Map (the "overview") ────────────────────────────────────── */
     #map{flex:1;height:100%;background:#eef0ec;}
@@ -153,10 +156,13 @@
     .pp-cat{font-family:var(--sans);font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-faint);}
     .pp-name{font-family:var(--serif);font-size:18px;line-height:1.13;margin-top:2px;}
     .pp-hours{font-family:var(--sans);font-size:11.5px;color:var(--ink-soft);margin-top:7px;}
-    .pp-links{font-family:var(--sans);font-size:11.5px;margin-top:9px;}
-    .pp-links a{color:var(--ink-soft);text-decoration:none;border-bottom:1px solid var(--rule);}
-    .pp-links a:hover{color:var(--ink);}
-    .pp-links .sep{color:var(--rule);margin:0 7px;}
+    .pp-links{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px;}
+    .pp-links a{font-family:var(--sans);font-size:10px;line-height:1;
+      letter-spacing:.02em;color:var(--ink-soft);text-decoration:none;
+      background:#f4f2e7;border:1px solid #cfcec1;border-radius:999px;
+      padding:4px 10px;white-space:nowrap;
+      transition:background .13s,color .13s,border-color .13s;}
+    .pp-links a:hover{background:var(--cat,#43433d);border-color:var(--cat,#43433d);color:var(--bg);}
 
     /* ── Lightbox (trail maps) ───────────────────────────────────── */
     .lightbox{position:fixed;inset:0;z-index:1000;display:flex;flex-direction:column;
@@ -426,11 +432,11 @@
       if (loc.trailmap)   links.push(`<a href="${loc.trailmap}" class="trailmap-link" data-title="${loc.name}" target="_blank" rel="noopener">Trail map</a>`);
       if (loc.instagram)  links.push(`<a href="${loc.instagram}" target="_blank" rel="noopener">Instagram</a>`);
       if (loc.googleMaps) links.push(`<a href="${loc.googleMaps}" target="_blank" rel="noopener">Directions</a>`);
-      return `<div class="pp">
+      return `<div class="pp" style="--cat:${catConfig[loc.category].color}">
         <div class="pp-cat">${catConfig[loc.category].name}</div>
         <div class="pp-name">${loc.name}</div>
         ${loc.hours ? `<div class="pp-hours">${loc.hours}</div>` : ''}
-        ${links.length ? `<div class="pp-links">${links.join('<span class="sep">·</span>')}</div>` : ''}
+        ${links.length ? `<div class="pp-links">${links.join('')}</div>` : ''}
       </div>`;
     }
 
@@ -573,7 +579,7 @@
       if (loc.phone)      links.push(`<a href="tel:${loc.phone.replace(/[^0-9+]/g, '')}">${loc.phone}</a>`);
       if (loc.googleMaps) links.push(`<a href="${loc.googleMaps}" target="_blank" rel="noopener">Directions</a>`);
       if (!links.length) return '';
-      return `<div class="entry-links">${links.join('<span class="sep">·</span>')}</div>`;
+      return `<div class="entry-links">${links.join('')}</div>`;
     }
 
 
