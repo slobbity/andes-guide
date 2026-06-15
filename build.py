@@ -192,6 +192,7 @@ def load_locations():
                 "website":     nullable("website"),
                 "googleMaps":  nullable("googleMaps"),
                 "instagram":   nullable("instagram"),
+                "trailmap":    nullable("trailmap"),
                 "driving_time_minutes": driving_time,
             })
 
