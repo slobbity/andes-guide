@@ -607,6 +607,7 @@
     let selected = -1;
 
     function select(i, { pan }) {
+      const alreadySelected = (selected === i);
       if (selected >= 0 && items[selected].el) items[selected].el.classList.remove('selected');
       selected = i;
       const it = items[i];
@@ -616,8 +617,9 @@
         it.el.classList.add('selected');
         it.el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
       }
-      if (pan) {
-        // Smooth pan and zoom to marker, centered in the visible map area
+      if (pan && !alreadySelected) {
+        // Smooth pan and zoom to marker, centered in the visible map area.
+        // Skip the animation if we're already viewing this location.
         const latlng = it.marker.getLatLng();
         // On a big zoom jump (e.g. the first selection from the wide overview),
         // Leaflet scales the whole vector overlay during the fly — which blows
