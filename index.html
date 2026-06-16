@@ -63,7 +63,16 @@
     .reading .ex i.on{background:#8d8c80;}
 
     /* ── Category groups (double as legend + filter) ─────────────── */
+    /* Tufte small multiples filter bar */
+    .tufte-filters{display:flex;gap:1.5rem;border-bottom:1px solid #e0e0e0;padding:0 0 0.5rem 0;margin:1.5rem 0 1.5rem 0;font-family:var(--sans);flex-wrap:wrap;}
+    .filter-btn{background:none;border:none;padding:0;margin:0;font-size:0.9rem;color:#757575;cursor:pointer;font-weight:400;transition:color 0.15s ease;position:relative;display:flex;align-items:baseline;gap:0.35rem;}
+    .filter-btn .count{font-size:0.7rem;vertical-align:super;color:#9e9e9e;}
+    .filter-btn:hover{color:#111;}
+    .filter-btn.active{color:#8b0000;font-weight:600;}
+    .filter-btn.active::after{content:"";position:absolute;bottom:-0.6rem;left:0;right:0;height:2px;background-color:#8b0000;}
+
     .group{margin-top:24px;}
+    .entry.dimmed{opacity:0.15;pointer-events:none;}
     .cat-head{
       font-family:var(--sans);font-size:11.5px;font-weight:600;
       letter-spacing:0.09em;text-transform:uppercase;color:var(--ink);
@@ -560,6 +569,59 @@
 
     const groupsEl = document.getElementById('groups');
 
+    // Build Tufte small-multiples filter bar with counts
+    const filterNav = document.createElement('nav');
+    filterNav.className = 'tufte-filters';
+    filterNav.setAttribute('aria-label', 'Location categories');
+
+    // Count by category
+    const catCounts = {};
+    catOrder.forEach(cat => {
+      catCounts[cat] = items.filter(it => it.cat === cat).length;
+    });
+    const totalCount = items.length;
+
+    // "All Locations" button
+    const allBtn = document.createElement('button');
+    allBtn.className = 'filter-btn active';
+    allBtn.setAttribute('data-category', 'all');
+    allBtn.innerHTML = `All Locations <span class="count">${totalCount}</span>`;
+    filterNav.appendChild(allBtn);
+
+    // Category buttons
+    catOrder.forEach(cat => {
+      if (catCounts[cat] === 0) return;
+      const btn = document.createElement('button');
+      btn.className = 'filter-btn';
+      btn.setAttribute('data-category', cat);
+      btn.innerHTML = `${catConfig[cat].name} <span class="count">${catCounts[cat]}</span>`;
+      filterNav.appendChild(btn);
+    });
+
+    groupsEl.insertBefore(filterNav, groupsEl.firstChild);
+
+    // Attach filter click handlers
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        // Update active state
+        document.querySelector('.filter-btn.active').classList.remove('active');
+        btn.classList.add('active');
+        const targetCat = btn.getAttribute('data-category');
+
+        // Dim non-matching entries and markers
+        items.forEach(it => {
+          const isVisible = targetCat === 'all' || it.cat === targetCat;
+          if (isVisible) {
+            it.el?.classList.remove('dimmed');
+            it.marker._path.style.opacity = '1';
+          } else {
+            it.el?.classList.add('dimmed');
+            it.marker._path.style.opacity = '0.15';
+          }
+        });
+      });
+    });
+
     catOrder.forEach(cat => {
       const members = items.map((it, i) => ({ it, i })).filter(x => x.it.cat === cat)
         .sort((a, b) => (a.it.loc.driving_time_minutes || 999) - (b.it.loc.driving_time_minutes || 999));
@@ -598,6 +660,7 @@
         const loc = it.loc;
         const el = document.createElement('div');
         el.className = 'entry' + (isClosed(loc) ? ' closed' : '');
+        el.setAttribute('data-category', cat);
         el.style.setProperty('--cat', catConfig[cat].color);
         el.innerHTML = `
           <div class="entry-name">${loc.name}</div>
