@@ -101,13 +101,15 @@
 
     .dist{display:inline-flex;align-items:center;gap:8px;
       font-variant-numeric:tabular-nums;}
-    .dist-timeline{display:inline-flex;align-items:center;gap:8px;font-variant-numeric:tabular-nums;}
-    .timeline-track{position:relative;height:24px;width:120px;margin:0;}
-    .timeline-line{position:absolute;top:12px;left:0;right:0;height:1px;background:var(--track);}
-    .timeline-ticks{position:absolute;top:0;left:0;right:0;height:100%;pointer-events:none;}
-    .tick{position:absolute;font-size:8px;color:var(--ink-faint);font-family:var(--sans);top:14px;transform:translateX(-50%);white-space:nowrap;}
-    .timeline-dot{position:absolute;top:12px;width:6px;height:6px;border-radius:50%;background:#6b4423;transform:translate(-50%,-50%);}
-    .timeline-label{font-family:var(--sans);font-size:11px;color:var(--ink-faint);white-space:nowrap;min-width:50px;}
+    .dist-timeline{display:inline-flex;align-items:center;gap:8px;font-variant-numeric:tabular-nums;align-items:flex-start;}
+    .timeline-track{position:relative;height:16px;width:140px;margin-top:2px;}
+    .timeline-line{position:absolute;top:8px;left:0;right:0;height:1px;background:var(--ink-soft);}
+    .timeline-intervals{position:absolute;top:0;left:0;right:0;height:100%;pointer-events:none;display:flex;}
+    .interval{flex:1;position:relative;border-left:1px dashed var(--ink-faint);}
+    .interval:last-child{border-right:1px dashed var(--ink-faint);}
+    .interval-label{position:absolute;font-size:7px;color:var(--ink-faint);font-family:var(--sans);top:9px;white-space:nowrap;left:-8px;transform:translateX(-50%);}
+    .timeline-dot{position:absolute;top:8px;width:5px;height:5px;border-radius:50%;background:#6b4423;transform:translate(-50%,-50%);z-index:10;}
+    .timeline-label{font-family:var(--sans);font-size:11px;color:var(--ink-faint);white-space:nowrap;min-width:70px;line-height:1.2;}
     .track{width:46px;height:3px;background:var(--track);display:inline-block;position:relative;}
     .fill{position:absolute;left:0;top:0;height:3px;background:var(--bar);}
 
@@ -426,19 +428,19 @@
       if (!minutes) minutes = 0;
       let label;
       if (minutes < 2) label = 'in town';
-      else if (minutes < 5) label = '<5 min';
-      else label = `~${minutes} min`;
+      else if (minutes < 5) label = '<5 min (approx.)';
+      else label = `${minutes} minutes (approx.)`;
       // Position dot on 0–60 minute timeline (clamped to 100%)
       const pct = Math.min(100, (minutes / 60) * 100);
       return `<span class="dist-timeline">
         <div class="timeline-track">
           <div class="timeline-line"></div>
-          <div class="timeline-ticks">
-            <span class="tick" style="left:0%">0</span>
-            <span class="tick" style="left:25%">15</span>
-            <span class="tick" style="left:50%">30</span>
-            <span class="tick" style="left:75%">45</span>
-            <span class="tick" style="left:100%">60</span>
+          <div class="timeline-intervals">
+            <div class="interval"><span class="interval-label">0m</span></div>
+            <div class="interval"><span class="interval-label">15m</span></div>
+            <div class="interval"><span class="interval-label">30m</span></div>
+            <div class="interval"><span class="interval-label">45m</span></div>
+            <div class="interval"><span class="interval-label">60m</span></div>
           </div>
           <div class="timeline-dot" style="left:${pct}%"></div>
         </div>
