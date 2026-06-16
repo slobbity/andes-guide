@@ -99,17 +99,16 @@
     .entry-meta{display:flex;align-items:center;gap:16px;margin-top:7px;
       font-family:var(--sans);font-size:11px;color:var(--ink-faint);}
 
-    .dist{display:inline-flex;align-items:center;gap:8px;
-      font-variant-numeric:tabular-nums;}
-    .dist-timeline{display:inline-flex;align-items:center;gap:8px;font-variant-numeric:tabular-nums;align-items:flex-start;}
-    .timeline-track{position:relative;height:16px;width:140px;margin-top:2px;}
-    .timeline-line{position:absolute;top:8px;left:0;right:0;height:1px;background:var(--ink-soft);}
-    .timeline-intervals{position:absolute;top:0;left:0;right:0;height:100%;pointer-events:none;display:flex;}
-    .interval{flex:1;position:relative;border-left:1px dashed var(--ink-faint);}
-    .interval:last-child{border-right:1px dashed var(--ink-faint);}
-    .interval-label{position:absolute;font-size:7px;color:var(--ink-faint);font-family:var(--sans);top:9px;white-space:nowrap;left:-8px;transform:translateX(-50%);}
-    .timeline-dot{position:absolute;top:8px;width:5px;height:5px;border-radius:50%;background:#6b4423;transform:translate(-50%,-50%);z-index:10;}
-    .timeline-label{font-family:var(--sans);font-size:11px;color:var(--ink-faint);white-space:nowrap;min-width:70px;line-height:1.2;}
+    /* Tufte-style driving time timeline */
+    .tufte-timeline-container{width:100%;max-width:450px;margin:0.8rem 0 1rem 0;font-family:var(--sans);}
+    .tufte-timeline-axis{position:relative;height:2px;background-color:#a0a0a0;margin-bottom:6px;}
+    .tufte-timeline-dot{position:absolute;top:50%;transform:translate(-50%,-50%);width:10px;height:10px;border-radius:50%;background-color:#4a5d6e;z-index:2;}
+    .tufte-timeline-label{position:absolute;top:-22px;transform:translateX(-50%);font-size:10px;font-weight:500;color:var(--ink);white-space:nowrap;}
+    .tufte-timeline-scale{position:relative;height:14px;width:100%;}
+    .tufte-timeline-scale .tick{position:absolute;top:-6px;width:1px;height:4px;background-color:#cccccc;}
+    .tufte-timeline-scale .tick-text{position:absolute;top:6px;transform:translateX(-50%);font-size:7px;color:#8c8c8c;letter-spacing:-0.01em;}
+
+    .dist{display:inline-flex;align-items:center;gap:8px;font-variant-numeric:tabular-nums;}
     .track{width:46px;height:3px;background:var(--track);display:inline-block;position:relative;}
     .fill{position:absolute;left:0;top:0;height:3px;background:var(--bar);}
 
@@ -426,26 +425,26 @@
 
     function driveTimeHTML(minutes) {
       if (!minutes) minutes = 0;
+      // Cap at 60 for layout stability
+      const validMinutes = Math.min(Math.max(minutes, 0), 60);
+      const pct = (validMinutes / 60) * 100;
       let label;
-      if (minutes < 2) label = 'in town';
-      else if (minutes < 5) label = '<5 min (approx.)';
-      else label = `${minutes} minutes (approx.)`;
-      // Position dot on 0–60 minute timeline (clamped to 100%)
-      const pct = Math.min(100, (minutes / 60) * 100);
-      return `<span class="dist-timeline">
-        <div class="timeline-track">
-          <div class="timeline-line"></div>
-          <div class="timeline-intervals">
-            <div class="interval"><span class="interval-label">0m</span></div>
-            <div class="interval"><span class="interval-label">15m</span></div>
-            <div class="interval"><span class="interval-label">30m</span></div>
-            <div class="interval"><span class="interval-label">45m</span></div>
-            <div class="interval"><span class="interval-label">60m</span></div>
-          </div>
-          <div class="timeline-dot" style="left:${pct}%"></div>
+      if (validMinutes < 2) label = 'in town';
+      else if (validMinutes < 5) label = '<5 min (approx.)';
+      else label = `${validMinutes} minutes (approx.)`;
+      return `<div class="tufte-timeline-container">
+        <div class="tufte-timeline-axis">
+          <div class="tufte-timeline-dot" style="left: ${pct}%;"></div>
+          <span class="tufte-timeline-label" style="left: ${pct}%;">${label}</span>
         </div>
-        <span class="timeline-label">${label}</span>
-      </span>`;
+        <div class="tufte-timeline-scale">
+          <div class="tick" style="left: 0%;"><span class="tick-text">0m</span></div>
+          <div class="tick" style="left: 25%;"><span class="tick-text">15m</span></div>
+          <div class="tick" style="left: 50%;"><span class="tick-text">30m</span></div>
+          <div class="tick" style="left: 75%;"><span class="tick-text">45m</span></div>
+          <div class="tick" style="left: 100%;"><span class="tick-text">60m</span></div>
+        </div>
+      </div>`;
     }
 
 
